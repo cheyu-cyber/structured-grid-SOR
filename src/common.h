@@ -1,7 +1,9 @@
 #ifndef SOR_COMMON_H
 #define SOR_COMMON_H
 
-#define _POSIX_C_SOURCE 199309L
+/* 200112L exposes clock_gettime (199309L was enough for that) and also the
+ * pthread_barrier_t API needed by sor2d_pth.c. */
+#define _POSIX_C_SOURCE 200112L
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +66,33 @@ static inline float max_abs(const float *a, long len)
         if (v > mx) mx = v;
     }
     return mx;
+}
+
+/* Binary grayscale PPM (P5). Normalizes a[] to [0, 255] using its own
+ * min/max; returns 0 on success, -1 otherwise. Useful for a quick look at
+ * the final field without pulling in a plotting library. */
+static inline int write_ppm_gray(const char *path, const float *a, int N)
+{
+    float mn =  INFINITY, mx = -INFINITY;
+    for (long i = 0; i < (long)N*N; i++) {
+        float v = a[i];
+        if (!isfinite(v)) continue;
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+    }
+    if (!isfinite(mn) || mn > mx) return -1;
+    float scale = (mx > mn) ? 255.0f / (mx - mn) : 0.0f;
+    FILE *f = fopen(path, "wb");
+    if (!f) return -1;
+    fprintf(f, "P5\n%d %d\n255\n", N, N);
+    for (long i = 0; i < (long)N*N; i++) {
+        int v = (int)((a[i] - mn) * scale);
+        if (v < 0) v = 0; else if (v > 255) v = 255;
+        unsigned char c = (unsigned char)v;
+        fwrite(&c, 1, 1, f);
+    }
+    fclose(f);
+    return 0;
 }
 
 #endif

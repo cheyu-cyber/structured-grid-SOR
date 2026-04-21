@@ -135,13 +135,20 @@ static void sor2d_temporal_superstep_omp(const float *src, float *dst,
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s N iters [B=64] [T=4]\n", argv[0]);
+        fprintf(stderr, "usage: %s N iters [B=64] [T=4] [--ppm path]\n", argv[0]);
         return 1;
     }
     int N = atoi(argv[1]);
     int iters = atoi(argv[2]);
-    int B = (argc >= 4) ? atoi(argv[3]) : 64;
-    int T = (argc >= 5) ? atoi(argv[4]) : 4;
+    int B = 64, T = 4;
+    const char *ppm_path = NULL;
+    int pos = 0;
+    for (int i = 3; i < argc; i++) {
+        if (strcmp(argv[i], "--ppm") == 0 && i + 1 < argc) {
+            ppm_path = argv[++i];
+        } else if (pos == 0) { B = atoi(argv[i]); pos++; }
+        else if (pos == 1)   { T = atoi(argv[i]); pos++; }
+    }
     float omega = OMEGA_DEFAULT;
 
     if (N < 4 || iters < 1 || B < 1 || T < 1) { fprintf(stderr, "bad args\n"); return 1; }
@@ -192,6 +199,13 @@ int main(int argc, char **argv)
     printf("  temporal : %9.4f s   (%7.2f Mupdates/s)  speedup %5.2fx\n",
            t_temp, pts / t_temp / 1e6, t_base / t_temp);
     printf("  max|base-temp| = %.4e   rel = %.4e\n", diff, rel);
+
+    if (ppm_path) {
+        if (write_ppm_gray(ppm_path, base_result, N) == 0)
+            printf("  wrote %s\n", ppm_path);
+        else
+            fprintf(stderr, "failed to write %s\n", ppm_path);
+    }
 
     free(base_a); free(base_b); free(temp_a); free(temp_b);
     return 0;

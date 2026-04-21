@@ -84,6 +84,31 @@ static float max_abs(const float *a, long len)
     return mx;
 }
 
+/* Minimal grayscale PPM (P5) writer — mirror of the helper in common.h. */
+static int write_ppm_gray(const char *path, const float *a, int N)
+{
+    float mn =  INFINITY, mx = -INFINITY;
+    for (long i = 0; i < (long)N*N; i++) {
+        float v = a[i];
+        if (!isfinite(v)) continue;
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+    }
+    if (!isfinite(mn) || mn > mx) return -1;
+    float scale = (mx > mn) ? 255.0f / (mx - mn) : 0.0f;
+    FILE *f = fopen(path, "wb");
+    if (!f) return -1;
+    fprintf(f, "P5\n%d %d\n255\n", N, N);
+    for (long i = 0; i < (long)N*N; i++) {
+        int v = (int)((a[i] - mn) * scale);
+        if (v < 0) v = 0; else if (v > 255) v = 255;
+        unsigned char c = (unsigned char)v;
+        fwrite(&c, 1, 1, f);
+    }
+    fclose(f);
+    return 0;
+}
+
 /* Host reference: identical stencil to Lab 7 / sor2d_cpu.c baseline. */
 static void cpu_sor(float *src, float *dst, int N, int iters, float omega)
 {
@@ -212,12 +237,16 @@ __global__ void sor_temporal(const float *src, float *dst, int N, float omega)
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s N iters\n", argv[0]);
+        fprintf(stderr, "usage: %s N iters [--ppm path]\n", argv[0]);
         return 1;
     }
     int N = atoi(argv[1]);
     int iters = atoi(argv[2]);
     float omega = OMEGA_DEFAULT;
+    const char *ppm_path = NULL;
+    for (int i = 3; i < argc; i++) {
+        if (strcmp(argv[i], "--ppm") == 0 && i + 1 < argc) ppm_path = argv[++i];
+    }
 
     if (iters % HALO_T != 0) {
         fprintf(stderr, "iters (%d) must be a multiple of HALO_T (%d)\n", iters, HALO_T);
@@ -313,6 +342,13 @@ int main(int argc, char **argv)
     printf("  max|base-cpu|  = %.4e  (rel %.2e)\n", diff_base, rel_base);
     printf("  max|temp-cpu|  = %.4e  (rel %.2e)\n", diff_temp, rel_temp);
     printf("  max|base-temp| = %.4e\n", diff_gpu);
+
+    if (ppm_path) {
+        if (write_ppm_gray(ppm_path, h_temp, N) == 0)
+            printf("  wrote %s\n", ppm_path);
+        else
+            fprintf(stderr, "failed to write %s\n", ppm_path);
+    }
 
     cudaEventDestroy(e0); cudaEventDestroy(e1);
     cudaFree(d_base[0]); cudaFree(d_base[1]);
