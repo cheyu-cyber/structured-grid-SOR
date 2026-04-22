@@ -1,8 +1,8 @@
 CC       ?= gcc
 NVCC     ?= nvcc
-CFLAGS   ?= -O3 -march=native -std=c11 -Wall -Wextra
-NVCCFLAGS?= -O3
-LDFLAGS  ?= -lm
+CFLAGS   ?= -O1 -std=gnu11
+NVCCFLAGS?= -O2
+LDFLAGS  ?= -lrt -lm
 
 OMPFLAGS ?= -fopenmp
 PTFLAGS  ?= -pthread
@@ -19,22 +19,22 @@ GPU_BINS := $(BINDIR)/sor2d_gpu
 all: $(BINS)
 gpu: $(GPU_BINS)
 
-$(BINDIR)/sor2d_cpu: $(SRCDIR)/sor2d_cpu.c $(SRCDIR)/common.h | $(BINDIR)
+$(BINDIR)/sor2d_cpu: $(SRCDIR)/sor2d_cpu.c | $(BINDIR)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
-$(BINDIR)/sor3d_cpu: $(SRCDIR)/sor3d_cpu.c $(SRCDIR)/common.h | $(BINDIR)
+$(BINDIR)/sor3d_cpu: $(SRCDIR)/sor3d_cpu.c | $(BINDIR)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
-$(BINDIR)/sor2d_omp: $(SRCDIR)/sor2d_omp.c $(SRCDIR)/common.h | $(BINDIR)
+$(BINDIR)/sor2d_omp: $(SRCDIR)/sor2d_omp.c | $(BINDIR)
 	$(CC) $(CFLAGS) $(OMPFLAGS) $< -o $@ $(LDFLAGS) $(OMPFLAGS)
 
-$(BINDIR)/sor3d_omp: $(SRCDIR)/sor3d_omp.c $(SRCDIR)/common.h | $(BINDIR)
+$(BINDIR)/sor3d_omp: $(SRCDIR)/sor3d_omp.c | $(BINDIR)
 	$(CC) $(CFLAGS) $(OMPFLAGS) $< -o $@ $(LDFLAGS) $(OMPFLAGS)
 
-$(BINDIR)/sor2d_pth: $(SRCDIR)/sor2d_pth.c $(SRCDIR)/common.h | $(BINDIR)
-	$(CC) $(CFLAGS) $(PTFLAGS) $< -o $@ $(LDFLAGS)
+$(BINDIR)/sor2d_pth: $(SRCDIR)/sor2d_pth.c | $(BINDIR)
+	$(CC) $(CFLAGS) $(PTFLAGS) $< -o $@ -lpthread $(LDFLAGS)
 
-$(BINDIR)/sor2d_rb: $(SRCDIR)/sor2d_rb.c $(SRCDIR)/common.h | $(BINDIR)
+$(BINDIR)/sor2d_rb: $(SRCDIR)/sor2d_rb.c | $(BINDIR)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 $(BINDIR)/sor2d_gpu: $(SRCDIR)/sor2d_gpu.cu | $(BINDIR)
