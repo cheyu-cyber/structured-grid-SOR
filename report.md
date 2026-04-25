@@ -5,8 +5,8 @@
 Extend the Lab 5–7 SOR work with **time skewing**: run `T` sweeps on a tile
 before writing it back to memory, cutting DRAM traffic by ≈`T` at the cost
 of redundant halo work. Implement it in three tiers (single-thread CPU,
-OpenMP, CUDA) in both 2D (5-point stencil) and 3D (7-point stencil, CPU
-only for now) and measure where the technique wins and where it doesn't.
+OpenMP, CUDA) in both 2D (5-point stencil) and 3D (7-point stencil) and
+measure where the technique wins and where it doesn't.
 
 ## Iteration form
 
@@ -53,7 +53,7 @@ baseline and on the tile loop (`collapse(2)` / `collapse(3)`) of the
 temporal version. Scratch buffers are allocated per-thread inside the
 parallel region. Super-steps stay serial; the parallelism is inside.
 
-### Tier 3 — CUDA (`sor2d_gpu.cu`)
+### Tier 3 — CUDA (`sor2d_gpu.cu`, `sor3d_gpu.cu`)
 
 **Baseline kernel** (`sor_sweep`): one sweep per launch, ping-pong
 buffers, 16×16 thread block. Matches the Lab 7 `sor_sweep_3a` form.
@@ -67,6 +67,12 @@ trapezoid cells carry through their previous value on each sub-step.
 
 Defaults: `TILE=32`, `HALO_T=4`, `INTER=24`. Shared-memory footprint per
 block is `2 × 32 × 32 × 4 = 8 KB`, so occupancy isn't shared-memory-bound.
+
+The 3D port (`sor3d_gpu.cu`) reuses the same scheme with a 3D thread
+block. Defaults: `TILE=8`, `HALO_T=2`, `INTER=4` (block 8×8×8 = 512
+threads, scratch `2 × 8³ × 4 = 4 KB`). The smaller per-step halo is
+forced by the 3D shared-memory budget — at `TILE=16, HALO_T=2` the two
+scratch buffers would be 32 KB and the block would be 4096 threads.
 
 ## Results
 
@@ -113,6 +119,46 @@ The 26.9× at N=258 is a **launch-overhead artifact**: the baseline issues
 realistic sizes (N≥1024) the steady-state speedup is ~2–3× and the kernel
 reaches ~130 GUpdates/s, roughly 2× what the coalesced sweep-per-launch
 baseline manages.
+
+### GPU 3D (NVIDIA L40S, CUDA 12.8, `sor3d_gpu.cu`)
+
+Re-verification was on an L40S (the V100 was unavailable); same code,
+same `omega=0.9`. `TILE=8, HALO_T=2, INTER=4`.
+
+| N   | iters | GPU baseline | GPU temporal | speedup | base Gup/s | temp Gup/s |
+|---:|---:|---:|---:|---:|---:|---:|
+|  34 |  8 | 108.26 ms | 0.017 ms | (launch-warmup artifact) | 0.002 | 15.1 |
+|  66 | 16 |   3.73 ms | 0.096 ms | 39.0× (launch-bound) | 1.12 | 43.8 |
+| 130 | 32 |   3.17 ms | 1.18 ms  | **2.68×** | 21.2 | 56.8 |
+| 258 | 96 |  21.18 ms | 31.79 ms | **0.67×** | 76.0 | 50.7 |
+
+Correctness holds at every size: `max|base-cpu|`, `max|temp-cpu|` and
+`max|base-temp|` are all in the `1.4×10⁻⁶ … 4.3×10⁻⁶` range (relative
+~`10⁻⁷`), the same `√N × float_epsilon` story as 2D. `max|base-temp|` is
+the smallest of the three diffs at every N≥66 — both kernels share the
+fp32 reduction order, so they agree more tightly with each other than
+either does with the fp64 CPU reference.
+
+The interesting finding is the speedup column: temporal **wins** at
+N=130 and **loses** at N=258. Cause is the halo-overhead ratio that
+killed 3D-CPU temporal as well, just at a different ratio:
+
+```
+useful work fraction = (TILE − 2·HALO_T)³ / TILE³ = 4³ / 8³ = 12.5%
+```
+
+so each block does 8× the cell-update work of its baseline equivalent.
+At N=130 the baseline is launch-overhead-bound (32 launches × ~25 µs ≈
+0.8 ms is most of its 3.17 ms total), so the 4× launch-count reduction
+in temporal still pays for the 8× redundant compute. At N=258 the
+baseline saturates the L40S DRAM bandwidth at 76 Gup/s and the redundant
+compute starts to bite — temporal drops to 50 Gup/s. This parallels
+exactly the 3D CPU result (0.41× temporal at N=258 cubic tiles) and
+confirms that **3D shared-memory time-skewing without z-streaming is
+bandwidth-poor**. The standard fix is the 2.5D-streaming variant
+(Micikevicius 2009): a 16×16 thread block slides a 3-z-plane window
+through shared memory instead of loading a cubic tile. Listed as
+next-steps bullet 1 below.
 
 ## What went well
 
@@ -263,14 +309,19 @@ project/
     ├── sor3d_cpu.c           # 3D single-thread baseline + temporally blocked
     ├── sor2d_omp.c           # 2D OpenMP  baseline + temporally blocked
     ├── sor3d_omp.c           # 3D OpenMP  baseline + temporally blocked
-    └── sor2d_gpu.cu          # 2D CUDA    baseline + shared-memory temporal
+    ├── sor2d_gpu.cu          # 2D CUDA    baseline + shared-memory temporal
+    └── sor3d_gpu.cu          # 3D CUDA    baseline + shared-memory temporal
 ```
 
 ## Next steps
 
-1. **3D GPU kernel** (`sor3d_gpu.cu`). Should reuse the 2D file's
-   shared-memory scheme with a 3D thread block. At `TILE=16, HALO_T=2`
-   the scratch is 8 KB — comfortable on V100.
+1. **3D GPU 2.5D-streaming variant.** The cubic-tile 3D kernel landed
+   (see GPU 3D table above) and validates correctly, but is bandwidth-
+   poor: at N=258 it runs at 0.67× baseline because useful-work fraction
+   is only `4³/8³ = 12.5%`. The standard fix is a 16×16 thread block
+   that slides a 3-z-plane window through shared memory (Micikevicius
+   2009). On the L40S this should reach ≥80 Gup/s and beat the cubic-
+   tile baseline at every N.
 2. **Rectangular 3D CPU tile** `B × B × Nk` instead of cubic, to fix
    the halo-amortization problem in tier 1.
 3. **Red-black SOR variant** to recover `omega ∈ (1, 2)` and real
