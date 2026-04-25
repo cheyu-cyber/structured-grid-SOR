@@ -1,0 +1,4 @@
+N=66 iters=20 B=32 T=2 OMEGA=0.900
+  baseline :    0.0193 s  (   271.70 Mupdates/s,   3.86e+07 cycles)
+  temporal :    0.0208 s  (   252.53 Mupdates/s,   4.15e+07 cycles)  speedup  0.93x
+  max|base-temp| = 0.0000e+00   rel = 0.0000e+00

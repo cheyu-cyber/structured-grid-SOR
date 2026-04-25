@@ -1,0 +1,5 @@
+N=1024 iters=32 threads=1 mode=strip sched=persistent OMEGA=0.900
+  serial   :    0.1519 s  (   0.220 Gup/s)
+  threaded :    0.0637 s  (   0.525 Gup/s)  speedup  2.39x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor2d_pth_decomp,2,1024,32,1,strip,persistent,6.368305e-02,5.248412e-01,0.0000e+00

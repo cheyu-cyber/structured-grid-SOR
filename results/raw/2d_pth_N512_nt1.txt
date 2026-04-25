@@ -1,0 +1,4 @@
+N=512 iters=32 nthreads=1 OMEGA=0.900
+  serial  :    0.0413 s  (   201.44 Mupdates/s,   8.26e+07 cycles)
+  pthread :    0.0207 s  (   402.26 Mupdates/s,   4.14e+07 cycles)  speedup  2.00x
+  max|serial-pthread| = 0.0000e+00   rel = 0.0000e+00
