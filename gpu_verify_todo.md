@@ -69,3 +69,48 @@ step then becomes Tier B sketch:
   > 3D GPU 2.5D-streaming variant.  16×16 thread block, slide a window
   > of 3 z-planes through shared memory.  This is the standard 3D GPU
   > stencil shape and should reach ≥50 GUp/s on V100.
+
+## Tier B2 verification: sor2d_gpu TILE/HALO runtime args
+
+`src/sor2d_gpu.cu` was refactored from `#define TILE/HALO_T` to
+`--tile T --halo H` runtime flags.  Defaults preserve the original
+behaviour (`tile=32`, `halo=4`).  Things to verify on the V100:
+
+```
+build/sor2d_gpu 2050 96                       # default; should match prior numbers
+build/sor2d_gpu 2050 96 --tile 32 --halo 4    # same as default, sanity
+build/sor2d_gpu 2050 96 --tile 32 --halo 2    # lower halo, INTER=28
+build/sor2d_gpu 2050 96 --tile 16 --halo 2    # smaller tile
+```
+
+- **Defaults**: numbers should be within noise of the prior session
+  (~64 GUp/s baseline at N=2050, ~130 GUp/s temporal — see report.md).
+  If the new code is *slower* at default args, something regressed in
+  the dynamic-shared-memory rewrite.
+- **`iters % halo == 0`** is enforced.  At halo=2 use iters=96 (✓);
+  at halo=6 use iters=96 (✓); at halo=4 use iters=96 (✓).
+- **Block dim limit**: TILE=32 → 1024 threads (max).  TILE > 32 will
+  error in main; safe.
+
+The `bench` target in `scripts/sweep.sh` includes a `gpu_th_sweep`
+section that drives the (TILE, HALO) ∈ {16,32} × {2,4,6} grid.  After
+running, plot the (TILE, HALO) vs gup_s heatmap by extending plot.py
+(currently unimplemented — chart slot reserved).
+
+## Pre-existing bug in sor3d_omp.c (caught while writing sor3d_pth_temporal)
+
+`src/sor3d_omp.c::sor3d_temporal_superstep_omp` uses inconsistent
+strides in the temporal kernel: the load loop indexes `sa` with stride
+`S` (the allocated buffer is `S^3`), but the compute loop indexes with
+strides `Sj` and `Sk`.  When `Si == Sj == Sk == S` (every tile when
+`(N-2)` is a multiple of `B`, i.e. all tested smoke configurations)
+this is a no-op — the addresses match.  At edge tiles where
+`Si < S` or `Sj < S` or `Sk < S`, the compute reads/writes wrong
+cells.
+
+**Repro**: pick `N` such that `(N-2) % B != 0`.  Currently every
+tested config is a multiple, so this has been silent.  E.g.
+`build/sor3d_omp 100 4 32 2` would have an edge tile.
+
+**Fix**: change all `Sj`/`Sk` strides in `sor3d_omp.c` to `S`, matching
+the buffer allocation.  `sor3d_pth_temporal.c` already does this.

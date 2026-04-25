@@ -13,7 +13,8 @@ BINDIR   := build
 BINS     := $(BINDIR)/sor2d_cpu $(BINDIR)/sor3d_cpu \
             $(BINDIR)/sor2d_omp $(BINDIR)/sor3d_omp \
             $(BINDIR)/sor2d_pth $(BINDIR)/sor2d_rb \
-            $(BINDIR)/sor2d_pth_decomp $(BINDIR)/sor3d_omp_part
+            $(BINDIR)/sor2d_pth_decomp $(BINDIR)/sor3d_omp_part \
+            $(BINDIR)/sor2d_pth_temporal $(BINDIR)/sor3d_pth_temporal
 
 GPU_BINS := $(BINDIR)/sor2d_gpu $(BINDIR)/sor3d_gpu
 
@@ -44,6 +45,12 @@ $(BINDIR)/sor2d_pth_decomp: $(SRCDIR)/sor2d_pth_decomp.c | $(BINDIR)
 $(BINDIR)/sor3d_omp_part: $(SRCDIR)/sor3d_omp_part.c | $(BINDIR)
 	$(CC) $(CFLAGS) $(OMPFLAGS) $< -o $@ $(LDFLAGS) $(OMPFLAGS)
 
+$(BINDIR)/sor2d_pth_temporal: $(SRCDIR)/sor2d_pth_temporal.c | $(BINDIR)
+	$(CC) $(CFLAGS) $(PTFLAGS) $< -o $@ -lpthread $(LDFLAGS)
+
+$(BINDIR)/sor3d_pth_temporal: $(SRCDIR)/sor3d_pth_temporal.c | $(BINDIR)
+	$(CC) $(CFLAGS) $(PTFLAGS) $< -o $@ -lpthread $(LDFLAGS)
+
 $(BINDIR)/sor2d_gpu: $(SRCDIR)/sor2d_gpu.cu | $(BINDIR)
 	$(NVCC) $(NVCCFLAGS) $< -o $@
 
@@ -66,6 +73,8 @@ smoke: $(BINS)
 	OMP_NUM_THREADS=4 $(BINDIR)/sor3d_omp_part 34 8 --mode slab
 	OMP_NUM_THREADS=4 $(BINDIR)/sor3d_omp_part 34 8 --mode pencil
 	OMP_NUM_THREADS=4 $(BINDIR)/sor3d_omp_part 34 8 --mode cube --block 16
+	$(BINDIR)/sor2d_pth_temporal 130 16 32 4 --threads 4
+	$(BINDIR)/sor3d_pth_temporal  34  8 16 2 --threads 4
 
 # Big-grid sweep harness.  Drives every binary at multiple (N, threads, mode)
 # and writes one row per run to results/results.csv.

@@ -252,6 +252,52 @@ if want sor3d_gpu && [ -x "$BUILD/sor3d_gpu" ]; then
     done
 fi
 
+# Temporal pthreads (CSV-emitting).  Same (N, threads) sweep as the
+# baseline pthreads decomp study; one row per (kind=baseline|temporal).
+if want sor2d_pth_temporal && [ -x "$BUILD/sor2d_pth_temporal" ]; then
+    echo "[5/5] 2D pthreads temporal blocking"
+    for N in $SIZES_2D; do
+        for nt in $THREADS; do
+            tag="2d_pth_temporal_N${N}_nt${nt}"
+            run_log "$tag" \
+                "$BUILD/sor2d_pth_temporal" $N $ITERS_2D $B_2D $T_2D \
+                --threads $nt > /dev/null
+        done
+    done
+fi
+
+if want sor3d_pth_temporal && [ -x "$BUILD/sor3d_pth_temporal" ]; then
+    echo "[5/5] 3D pthreads temporal blocking"
+    for N in $SIZES_3D; do
+        for nt in $THREADS; do
+            tag="3d_pth_temporal_N${N}_nt${nt}"
+            run_log "$tag" \
+                "$BUILD/sor3d_pth_temporal" $N $ITERS_3D $B_3D 2 \
+                --threads $nt > /dev/null
+        done
+    done
+fi
+
+# GPU TILE/HALO sweep (only if sor2d_gpu is built).  Drives the
+# (TILE, HALO) heatmap that B2 unblocks.
+if want gpu_th_sweep && [ -x "$BUILD/sor2d_gpu" ]; then
+    echo "[5/5] GPU TILE/HALO sweep"
+    for N in $SIZES_2D; do
+        for tile in 16 32; do
+            for halo in 2 4 6; do
+                # tile - 2*halo must be > 0 and iters % halo == 0.
+                inter=$((tile - 2 * halo))
+                if [ $inter -le 0 ]; then continue; fi
+                if [ $((ITERS_2D % halo)) -ne 0 ]; then continue; fi
+                tag="2d_gpu_th_N${N}_T${tile}_H${halo}"
+                run_log "$tag" \
+                    "$BUILD/sor2d_gpu" $N $ITERS_2D \
+                    --tile $tile --halo $halo > /dev/null
+            done
+        done
+    done
+fi
+
 echo
 echo "Wrote $CSV"
 nrows=$(($(wc -l < "$CSV") - 1))

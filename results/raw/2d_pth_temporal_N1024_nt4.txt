@@ -1,0 +1,8 @@
+N=1024 iters=32 B=128 T=8 threads=4 OMEGA=0.900
+  serial   :    0.0585 s  (  0.571 Gup/s)
+  baseline :    0.0314 s  (  1.063 Gup/s)  speedup vs serial  1.86x
+  temporal :    0.0420 s  (  0.796 Gup/s)  speedup vs serial  1.39x, vs baseline  0.75x
+  max|serial-baseline| = 0.0000e+00   rel = 0.0000e+00
+  max|serial-temporal| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor2d_pth_temporal,2,1024,32,4,baseline,strip,3.144693e-02,1.062854e+00,0.0000e+00
+CSV,sor2d_pth_temporal,2,1024,32,4,temporal,B=128;T=8,4.200371e-02,7.957270e-01,0.0000e+00

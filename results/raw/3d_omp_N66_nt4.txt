@@ -1,5 +1,5 @@
 OMP_NUM_THREADS=4
 N=66 iters=20 B=32 T=2 OMEGA=0.900
-  baseline :    0.0050 s  (  1050.04 Mupdates/s,   9.99e+06 cycles)
-  temporal :    0.0089 s  (   587.62 Mupdates/s,   1.78e+07 cycles)  speedup  0.56x
+  baseline :    0.0068 s  (   771.54 Mupdates/s,   1.36e+07 cycles)
+  temporal :    0.0090 s  (   585.24 Mupdates/s,   1.79e+07 cycles)  speedup  0.76x
   max|base-temp| = 0.0000e+00   rel = 0.0000e+00

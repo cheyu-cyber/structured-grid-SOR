@@ -40,10 +40,11 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
 }
 
 /* ---------- Parameters --------------------------------------------------- */
-#define BLOCK_DIM 16                    /* 16x16 = 256 threads for baseline */
-#define TILE      32
-#define HALO_T     4
-#define INTER     (TILE - 2*HALO_T)     /* output cells per block side */
+#define BLOCK_DIM    16    /* 16x16 = 256 threads for the baseline kernel.
+                              Independent of the temporal-kernel TILE. */
+#define TILE_DEFAULT 32    /* defaults preserve previous behaviour */
+#define HALO_DEFAULT  4
+#define TILE_MAX     32    /* per-axis limit: TILE^2 <= 1024 thread budget */
 
 #define MINVAL   0.0f
 #define MAXVAL  10.0f
@@ -190,71 +191,71 @@ __global__ void copy_boundary(const data_t *d_old, data_t *d_new, int N)
    __syncthreads() between sub-steps.
    ========================================================================== */
 __global__ void sor_temporal(const data_t *d_old, data_t *d_new,
-                             int N, float omega)
+                             int N, float omega, int tile, int halo)
 {
-    __shared__ data_t sa[TILE][TILE];
-    __shared__ data_t sb[TILE][TILE];
+    /* Dynamic shared memory: two ping-pong buffers laid out back-to-back.
+       Caller passes 2 * tile * tile * sizeof(data_t) bytes via the
+       launch's shared-mem size argument. */
+    extern __shared__ data_t sshared[];
+    data_t *sa = sshared;
+    data_t *sb = sshared + (size_t)tile * tile;
 
     int lx = threadIdx.x;
     int ly = threadIdx.y;
+    int inter = tile - 2 * halo;
 
-    /* Each block produces an INTER x INTER interior region starting at
-       (1 + bx*INTER, 1 + by*INTER) in global coords.  Local (lx, ly) maps
-       to gx = (1 + bx*INTER) + (lx - HALO_T) -- same for y. */
-    int bi = blockIdx.y * INTER + 1;
-    int bj = blockIdx.x * INTER + 1;
-    int gi = bi + (ly - HALO_T);
-    int gj = bj + (lx - HALO_T);
+    /* Each block produces an `inter x inter` interior region starting
+       at (1 + bx*inter, 1 + by*inter) in global coords. */
+    int bi = blockIdx.y * inter + 1;
+    int bj = blockIdx.x * inter + 1;
+    int gi = bi + (ly - halo);
+    int gj = bj + (lx - halo);
 
     /* Clamp-to-edge load. */
     int cgi = gi; if (cgi < 0) cgi = 0; else if (cgi > N-1) cgi = N-1;
     int cgj = gj; if (cgj < 0) cgj = 0; else if (cgj > N-1) cgj = N-1;
     data_t v = d_old[cgi * N + cgj];
-    sa[ly][lx] = v;
-    sb[ly][lx] = v;
+    sa[ly * tile + lx] = v;
+    sb[ly * tile + lx] = v;
     __syncthreads();
 
-    /* HALO_T sub-steps; valid update region shrinks by 1 on each side each
-       sub-step.  Cells outside the update region carry through via a copy
-       of the "other" buffer from the previous sub-step. */
+    /* `halo` sub-steps; valid update region shrinks by 1 on each side per
+       sub-step.  Cells outside the trapezoid carry through from the
+       previous buffer. */
     int cur = 0;
-    #pragma unroll
-    for (int t = 0; t < HALO_T; t++) {
+    for (int t = 0; t < halo; t++) {
         int lo = 1 + t;
-        int hi = TILE - 1 - t;
+        int hi = tile - 1 - t;
         bool in_trap   = (lx >= lo && lx < hi && ly >= lo && ly < hi);
         bool in_domain = (gi >= 1 && gi <= N-2 && gj >= 1 && gj <= N-2);
         data_t out;
         if (in_trap && in_domain) {
             data_t s, l, r, u, d;
-            if (cur == 0) {
-                s = sa[ly][lx];
-                l = sa[ly][lx-1]; r = sa[ly][lx+1];
-                u = sa[ly-1][lx]; d = sa[ly+1][lx];
-            } else {
-                s = sb[ly][lx];
-                l = sb[ly][lx-1]; r = sb[ly][lx+1];
-                u = sb[ly-1][lx]; d = sb[ly+1][lx];
-            }
+            data_t *cur_buf = (cur == 0) ? sa : sb;
+            s = cur_buf[ly * tile + lx];
+            l = cur_buf[ly * tile + (lx-1)];
+            r = cur_buf[ly * tile + (lx+1)];
+            u = cur_buf[(ly-1) * tile + lx];
+            d = cur_buf[(ly+1) * tile + lx];
             data_t nb = 0.25f * (l + r + u + d);
             out = s - omega * (s - nb);
         } else {
-            out = (cur == 0) ? sa[ly][lx] : sb[ly][lx];
+            out = (cur == 0) ? sa[ly * tile + lx] : sb[ly * tile + lx];
         }
         __syncthreads();
-        if (cur == 0) sb[ly][lx] = out;
-        else          sa[ly][lx] = out;
+        if (cur == 0) sb[ly * tile + lx] = out;
+        else          sa[ly * tile + lx] = out;
         __syncthreads();
         cur = 1 - cur;
     }
 
-    /* Write the central INTER x INTER region back.  After HALO_T swaps,
-       cur points to the buffer holding the advanced state. */
-    bool write_slot = (lx >= HALO_T && lx < TILE - HALO_T &&
-                       ly >= HALO_T && ly < TILE - HALO_T);
+    /* Write the central `inter x inter` region back. */
+    bool write_slot = (lx >= halo && lx < tile - halo &&
+                       ly >= halo && ly < tile - halo);
     bool in_domain  = (gi >= 1 && gi <= N-2 && gj >= 1 && gj <= N-2);
     if (write_slot && in_domain) {
-        data_t v_out = (cur == 0) ? sa[ly][lx] : sb[ly][lx];
+        data_t v_out = (cur == 0) ? sa[ly * tile + lx]
+                                  : sb[ly * tile + lx];
         d_new[gi * N + gj] = v_out;
     }
 }
@@ -265,23 +266,45 @@ __global__ void sor_temporal(const data_t *d_old, data_t *d_new,
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s N iters [--ppm path]\n", argv[0]);
+        fprintf(stderr,
+            "usage: %s N iters [--tile T=%d] [--halo H=%d] [--ppm path]\n",
+            argv[0], TILE_DEFAULT, HALO_DEFAULT);
         return 1;
     }
     int N = atoi(argv[1]);
     int iters = atoi(argv[2]);
+    int tile = TILE_DEFAULT;
+    int halo = HALO_DEFAULT;
     float omega = OMEGA;
     const char *ppm_path = NULL;
     for (int i = 3; i < argc; i++) {
-        if (strcmp(argv[i], "--ppm") == 0 && i + 1 < argc) ppm_path = argv[++i];
+        if (!strcmp(argv[i], "--tile") && i + 1 < argc) {
+            tile = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--halo") && i + 1 < argc) {
+            halo = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--ppm") && i + 1 < argc) {
+            ppm_path = argv[++i];
+        } else {
+            fprintf(stderr, "unknown arg: %s\n", argv[i]); return 1;
+        }
     }
 
-    if (iters % HALO_T != 0) {
-        fprintf(stderr, "iters (%d) must be a multiple of HALO_T (%d)\n",
-                iters, HALO_T);
+    if (tile < 4 || tile > TILE_MAX) {
+        fprintf(stderr, "tile (%d) out of range [4, %d]\n", tile, TILE_MAX);
         return 1;
     }
-    int super = iters / HALO_T;
+    if (halo < 1 || 2 * halo >= tile) {
+        fprintf(stderr, "halo (%d) must satisfy 1 <= halo and 2*halo < tile (%d)\n",
+                halo, tile);
+        return 1;
+    }
+    int inter = tile - 2 * halo;
+    if (iters % halo != 0) {
+        fprintf(stderr, "iters (%d) must be a multiple of halo (%d)\n",
+                iters, halo);
+        return 1;
+    }
+    int super = iters / halo;
 
     CUDA_SAFE_CALL(cudaSetDevice(0));
     /* Warm up. */
@@ -330,13 +353,15 @@ int main(int argc, char **argv)
     CUDA_SAFE_CALL(cudaMemcpy(d_temp[0], h_init, bytes, cudaMemcpyHostToDevice));
     CUDA_SAFE_CALL(cudaMemcpy(d_temp[1], h_init, bytes, cudaMemcpyHostToDevice));
 
-    dim3 tblk(TILE, TILE);
-    dim3 tgrd((N - 2 + INTER - 1) / INTER, (N - 2 + INTER - 1) / INTER);
+    dim3 tblk(tile, tile);
+    dim3 tgrd((N - 2 + inter - 1) / inter, (N - 2 + inter - 1) / inter);
+    size_t shmem_bytes = (size_t)2 * tile * tile * sizeof(data_t);
 
     cudaEventRecord(t_start, 0);
     int tcur = 0;
     for (int s = 0; s < super; s++) {
-        sor_temporal<<<tgrd, tblk>>>(d_temp[tcur], d_temp[1-tcur], N, omega);
+        sor_temporal<<<tgrd, tblk, shmem_bytes>>>(
+            d_temp[tcur], d_temp[1-tcur], N, omega, tile, halo);
         tcur = 1 - tcur;
     }
     cudaEventRecord(t_stop, 0);
@@ -362,16 +387,25 @@ int main(int argc, char **argv)
     float rel_temp  = (scale > 0) ? diff_temp / scale : 0.0f;
 
     double pts = (double)(N-2) * (double)(N-2) * (double)iters;
-    printf("N=%d  iters=%d  TILE=%d  HALO_T=%d  INTER=%d  super=%d\n",
-           N, iters, TILE, HALO_T, INTER, super);
-    printf("  GPU baseline  : %8.3f ms  (%8.2f Mupdates/s)\n",
-           base_ms, pts / (base_ms/1000.0) / 1e6);
-    printf("  GPU temporal  : %8.3f ms  (%8.2f Mupdates/s)  speedup vs base %5.2fx\n",
-           temp_ms, pts / (temp_ms/1000.0) / 1e6, base_ms / temp_ms);
+    double base_gups = pts / (base_ms / 1000.0) / 1e9;
+    double temp_gups = pts / (temp_ms / 1000.0) / 1e9;
+
+    printf("N=%d  iters=%d  TILE=%d  HALO=%d  INTER=%d  super=%d\n",
+           N, iters, tile, halo, inter, super);
+    printf("  GPU baseline  : %8.3f ms  (%7.3f Gup/s)\n", base_ms, base_gups);
+    printf("  GPU temporal  : %8.3f ms  (%7.3f Gup/s)  speedup vs base %5.2fx\n",
+           temp_ms, temp_gups, base_ms / temp_ms);
     printf("  CPU reference : %8.3f ms\n", cpu_ms);
     printf("  max|base-cpu|  = %.4e  (rel %.2e)\n", diff_base, rel_base);
     printf("  max|temp-cpu|  = %.4e  (rel %.2e)\n", diff_temp, rel_temp);
     printf("  max|base-temp| = %.4e\n", diff_gpu);
+
+    /* Two CSV lines for the harness; the temporal extra encodes (tile, halo)
+       so plot.py can render the (TILE, HALO) heatmap. */
+    printf("CSV,sor2d_gpu,2,%d,%d,0,baseline,TILE=%d;HALO=%d,%.6e,%.6e,%.4e\n",
+           N, iters, tile, halo, base_ms / 1000.0, base_gups, diff_base);
+    printf("CSV,sor2d_gpu,2,%d,%d,0,temporal,TILE=%d;HALO=%d,%.6e,%.6e,%.4e\n",
+           N, iters, tile, halo, temp_ms / 1000.0, temp_gups, diff_temp);
 
     if (ppm_path) {
         if (write_ppm_gray(ppm_path, h_temp, N) == 0)
