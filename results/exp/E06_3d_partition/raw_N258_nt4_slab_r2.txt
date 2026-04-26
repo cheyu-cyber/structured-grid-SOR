@@ -1,0 +1,6 @@
+OMP_NUM_THREADS=4
+N=258 iters=20 threads=4 mode=slab OMEGA=0.900
+  serial(1t):    0.4532 s  (  9.06e+08 cycles,   2.701 CPE)
+  threaded  :    0.1499 s  (     3e+08 cycles,   0.894 CPE)  speedup  3.02x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor3d_omp_part,3,258,20,4,slab,B=32,1.499403e-01,8.937140e-01,0.0000e+00

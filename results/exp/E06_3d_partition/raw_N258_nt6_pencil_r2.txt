@@ -1,0 +1,6 @@
+OMP_NUM_THREADS=6
+N=258 iters=20 threads=6 mode=pencil OMEGA=0.900
+  serial(1t):    0.4485 s  (  8.97e+08 cycles,   2.673 CPE)
+  threaded  :    0.1084 s  (  2.17e+08 cycles,   0.646 CPE)  speedup  4.14x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor3d_omp_part,3,258,20,6,pencil,B=32,1.084242e-01,6.462585e-01,0.0000e+00

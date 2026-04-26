@@ -1,0 +1,5 @@
+N=2048 iters=64 threads=8 mode=interleaved sched=spawn OMEGA=0.900
+  serial   :    0.2848 s  (   0.941 Gup/s)
+  threaded :    0.1067 s  (   2.510 Gup/s)  speedup  2.67x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor2d_pth_decomp,2,2048,64,8,interleaved,spawn,1.067273e-01,2.510242e+00,0.0000e+00

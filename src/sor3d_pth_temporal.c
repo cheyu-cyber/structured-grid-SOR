@@ -433,25 +433,31 @@ int main(int argc, char **argv)
     data_t rel_t  = (scale > 0.0) ? diff_t / scale : 0.0;
 
     double pts = (double)(N-2) * (double)(N-2) * (double)(N-2) * (double)iters;
+    const double CPNS = 2.0;
+    double cpe_ref  = CPNS * 1.0e9 * t_ref  / pts;
+    double cpe_base = CPNS * 1.0e9 * t_base / pts;
+    double cpe_temp = CPNS * 1.0e9 * t_temp / pts;
 
     printf("N=%d iters=%d B=%d T=%d threads=%d OMEGA=%.3f\n",
            N, iters, B, T, nthreads, (double)OMEGA);
-    printf("  serial   : %9.4f s  (%7.3f Gup/s)\n",
-           t_ref, pts / t_ref / 1e9);
-    printf("  baseline : %9.4f s  (%7.3f Gup/s)  speedup vs serial %5.2fx\n",
-           t_base, pts / t_base / 1e9, t_ref / t_base);
-    printf("  temporal : %9.4f s  (%7.3f Gup/s)  speedup vs serial %5.2fx, "
-           "vs baseline %5.2fx\n",
-           t_temp, pts / t_temp / 1e9, t_ref / t_temp, t_base / t_temp);
+    printf("  serial   : %9.4f s  (%10.3g cycles, %7.3f CPE)\n",
+           t_ref, CPNS * 1.0e9 * t_ref, cpe_ref);
+    printf("  baseline : %9.4f s  (%10.3g cycles, %7.3f CPE)  "
+           "speedup vs serial %5.2fx\n",
+           t_base, CPNS * 1.0e9 * t_base, cpe_base, t_ref / t_base);
+    printf("  temporal : %9.4f s  (%10.3g cycles, %7.3f CPE)  "
+           "speedup vs serial %5.2fx, vs baseline %5.2fx\n",
+           t_temp, CPNS * 1.0e9 * t_temp, cpe_temp,
+           t_ref / t_temp, t_base / t_temp);
     printf("  max|serial-baseline| = %.4e   rel = %.4e\n",
            (double)diff_b, (double)rel_b);
     printf("  max|serial-temporal| = %.4e   rel = %.4e\n",
            (double)diff_t, (double)rel_t);
 
     printf("CSV,sor3d_pth_temporal,3,%d,%d,%d,baseline,strip,%.6e,%.6e,%.4e\n",
-           N, iters, nthreads, t_base, pts / t_base / 1e9, (double)diff_b);
+           N, iters, nthreads, t_base, cpe_base, (double)diff_b);
     printf("CSV,sor3d_pth_temporal,3,%d,%d,%d,temporal,B=%d;T=%d,%.6e,%.6e,%.4e\n",
-           N, iters, nthreads, B, T, t_temp, pts / t_temp / 1e9, (double)diff_t);
+           N, iters, nthreads, B, T, t_temp, cpe_temp, (double)diff_t);
 
     free(base_a); free(base_b); free(temp_a); free(temp_b);
     free(ref_a); free(ref_b);

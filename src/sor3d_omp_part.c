@@ -313,22 +313,26 @@ int main(int argc, char **argv)
     data_t rel   = (scale > 0.0) ? diff / scale : 0.0;
 
     double pts  = (double)(N-2) * (double)(N-2) * (double)(N-2) * (double)iters;
-    double gups = pts / t_omp / 1e9;
+    /* CPE (lab convention): wall-clock cycles per output cell at CPNS=2.0. */
+    const double CPNS = 2.0;
+    double cpe_ref = CPNS * 1.0e9 * t_ref / pts;
+    double cpe_omp = CPNS * 1.0e9 * t_omp / pts;
 
     printf("N=%d iters=%d threads=%d mode=%s",
            N, iters, nthreads, part_name(mode));
     if (mode == PART_CUBE) printf(" B=%d", B);
     printf(" OMEGA=%.3f\n", (double)OMEGA);
-    printf("  serial(1t): %9.4f s  (%8.3f Gup/s)\n", t_ref, pts/t_ref/1e9);
-    printf("  threaded  : %9.4f s  (%8.3f Gup/s)  speedup %5.2fx\n",
-           t_omp, gups, t_ref / t_omp);
+    printf("  serial(1t): %9.4f s  (%10.3g cycles, %7.3f CPE)\n",
+           t_ref, CPNS * 1.0e9 * t_ref, cpe_ref);
+    printf("  threaded  : %9.4f s  (%10.3g cycles, %7.3f CPE)  speedup %5.2fx\n",
+           t_omp, CPNS * 1.0e9 * t_omp, cpe_omp, t_ref / t_omp);
     printf("  max|serial-threaded| = %.4e   rel = %.4e\n",
            (double)diff, (double)rel);
 
     /* Machine-readable. */
     printf("CSV,sor3d_omp_part,3,%d,%d,%d,%s,B=%d,%.6e,%.6e,%.4e\n",
            N, iters, nthreads, part_name(mode), B,
-           t_omp, gups, (double)diff);
+           t_omp, cpe_omp, (double)diff);
 
     free(omp_a); free(omp_b); free(ref_a); free(ref_b);
     return 0;

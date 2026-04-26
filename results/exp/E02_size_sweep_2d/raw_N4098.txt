@@ -1,0 +1,6 @@
+omp's default number of threads is 8
+Using 8 threads for OpenMP
+N=4098 iters=64 B=128 T=8 OMEGA=0.900 GHOST=2
+  baseline :    0.2375 s  (  4521.66 Mupdates/s,   4.75e+08 cycles)
+  temporal :    0.2198 s  (  4885.05 Mupdates/s,    4.4e+08 cycles)  speedup  1.08x
+  max|base-temp| = 0.0000e+00   rel = 0.0000e+00

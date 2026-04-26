@@ -69,19 +69,25 @@ want() {
 
 # ----- helpers ---------------------------------------------------------------
 # CSV columns:
-#   binary, dim, N, iters, threads, mode, extra, time_s, gup_s, max_diff
-echo "binary,dim,N,iters,threads,mode,extra,time_s,gup_s,max_diff" > "$CSV"
+#   binary, dim, N, iters, threads, mode, extra, time_s, cpe, max_diff
+# CPE (cycles per element, lab convention) = time_s * CPNS * 1e9 / ((N-2)^dim * iters),
+# CPNS = 2.0 (matches binaries' embedded CPNS).
+CPNS=2.0
+echo "binary,dim,N,iters,threads,mode,extra,time_s,cpe,max_diff" > "$CSV"
 
 emit_csv_from_log() {
-    # Forward any `CSV,...` lines the binary itself printed.
+    # Forward any `CSV,...` lines the binary itself printed.  These rows
+    # currently use the binary's own metric column; converting them to CPE
+    # would require re-deriving from time_s.  Accept the binary's metric
+    # for forwarded rows and document with a `# RAW_BIN_METRIC` comment.
     grep '^CSV,' "$1" | sed 's/^CSV,//' >> "$CSV" || true
 }
 
 parse_existing() {
     # Args: log_path binary dim N iters threads kind extra
     # Existing binaries print:
-    #   baseline : 0.6024 s  (5557.86 Mupdates/s, ...
-    #   max|base-temp| = 1.2e-06   ...
+    #   baseline : 0.6024 s  ( ... )
+    # Parse only time_s; compute CPE in the awk END block.
     local log="$1" bin="$2" dim="$3" N="$4" iters="$5" thr="$6"
     local kind="$7" extra="$8"
     local label
@@ -91,22 +97,21 @@ parse_existing() {
         pthread)  label="pthread"  ;;
         *)        label="$kind"    ;;
     esac
-    # Extract `<label> : <time> s  (<gups> Mupdates/s,...`
     awk -v lbl="$label" -v bin="$bin" -v dim="$dim" -v N="$N" \
-        -v iters="$iters" -v thr="$thr" -v kind="$kind" -v extra="$extra" '
+        -v iters="$iters" -v thr="$thr" -v kind="$kind" -v extra="$extra" \
+        -v cpns="$CPNS" '
         $0 ~ "^[ \t]+" lbl "[[:space:]]*:" {
-            for (i=1; i<=NF; i++) {
-                if ($i == ":") { t=$(i+1); }
-                if ($i == "Mupdates/s,") { mu=$(i-1); }
-            }
-            gup = mu / 1000.0
-            time_s = t
+            for (i=1; i<=NF; i++) if ($i == ":") { time_s=$(i+1); break }
         }
         /max\|/ { for (i=1; i<=NF; i++) if ($i=="=") { d=$(i+1); break } }
         END {
-            if (time_s != "" && gup != "") {
+            if (time_s != "") {
+                if (dim == 2)      elements = (N-2)*(N-2)*iters
+                else if (dim == 3) elements = (N-2)*(N-2)*(N-2)*iters
+                else               elements = 1
+                cpe = time_s * cpns * 1e9 / elements
                 printf "%s,%d,%s,%s,%s,%s,%s,%.6e,%.6e,%s\n",
-                    bin, dim, N, iters, thr, kind, extra, time_s, gup, d
+                    bin, dim, N, iters, thr, kind, extra, time_s, cpe, d
             }
         }' "$log" >> "$CSV"
 }

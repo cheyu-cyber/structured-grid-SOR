@@ -1,0 +1,4 @@
+N=2050 iters=96 B=128 T=8 OMEGA=0.900 GHOST=2
+  baseline :    0.5969 s  (  1.19e+09 cycles,   2.965 CPE)
+  temporal :    0.5201 s  (  1.04e+09 cycles,   2.583 CPE)  speedup  1.15x
+  max|base-temp| = 0.0000e+00   rel = 0.0000e+00

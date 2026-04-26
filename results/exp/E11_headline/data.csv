@@ -1,0 +1,10 @@
+tier,kind,cpe_med,cpe_min,cpe_max,n_reps
+serial-CPU,baseline,2.7920,2.7680,2.9650,3
+serial-CPU,temporal,2.5860,2.5830,2.6040,3
+OMP-8t,baseline,0.2290,0.2200,0.2460,3
+OMP-8t,temporal,0.3470,0.3380,0.3590,3
+pthreads-8t-strip,baseline,0.3986,0.3926,0.4406,3
+pthreads-8t-temp,baseline,0.3917,0.3359,0.4111,3
+pthreads-8t-temp,temporal,0.3775,0.3521,0.4351,3
+GPU,baseline,0.0147,0.0133,0.0191,3
+GPU,temporal,0.0090,0.0090,0.0090,3

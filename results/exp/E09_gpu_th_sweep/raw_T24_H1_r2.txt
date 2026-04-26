@@ -1,0 +1,9 @@
+N=2048  iters=96  TILE=24  HALO=1  INTER=22  super=96
+  GPU baseline  :    2.807 ms  (  5.61e+06 cycles,  0.0140 CPE)
+  GPU temporal  :    2.649 ms  (   5.3e+06 cycles,  0.0132 CPE)  speedup vs base  1.06x
+  CPU reference :  294.454 ms
+  max|base-cpu|  = 2.8610e-06  (rel 2.86e-07)
+  max|temp-cpu|  = 2.8610e-06  (rel 2.86e-07)
+  max|base-temp| = 1.9073e-06
+CSV,sor2d_gpu,2,2048,96,0,baseline,TILE=24;HALO=1,2.807392e-03,1.397174e-02,2.8610e-06
+CSV,sor2d_gpu,2,2048,96,0,temporal,TILE=24;HALO=1,2.648832e-03,1.318263e-02,2.8610e-06

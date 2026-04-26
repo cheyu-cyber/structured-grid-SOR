@@ -3,7 +3,7 @@
 This local dev machine has no `nvcc` and no CUDA driver, so neither
 `sor2d_gpu.cu` nor the new `sor3d_gpu.cu` have been built or executed
 in this session.  The 2D file was last verified on the V100 in the
-prior session (~130 GUp/s temporal, ~3×10⁻⁶ rel error vs. CPU); the 3D
+prior session (~0.015 (CPE) temporal, ~3×10⁻⁶ rel error vs. CPU); the 3D
 file has *never* been run.
 
 ## Build
@@ -68,7 +68,7 @@ step then becomes Tier B sketch:
 
   > 3D GPU 2.5D-streaming variant.  16×16 thread block, slide a window
   > of 3 z-planes through shared memory.  This is the standard 3D GPU
-  > stencil shape and should reach ≥50 GUp/s on V100.
+  > stencil shape and should reach ≥0.040 (CPE) on V100.
 
 ## Tier B2 verification: sor2d_gpu TILE/HALO runtime args
 
@@ -84,7 +84,7 @@ build/sor2d_gpu 2050 96 --tile 16 --halo 2    # smaller tile
 ```
 
 - **Defaults**: numbers should be within noise of the prior session
-  (~64 GUp/s baseline at N=2050, ~130 GUp/s temporal — see report.md).
+  (~0.031 (CPE) baseline at N=2050, ~0.015 (CPE) temporal — see report.md).
   If the new code is *slower* at default args, something regressed in
   the dynamic-shared-memory rewrite.
 - **`iters % halo == 0`** is enforced.  At halo=2 use iters=96 (✓);
@@ -94,7 +94,7 @@ build/sor2d_gpu 2050 96 --tile 16 --halo 2    # smaller tile
 
 The `bench` target in `scripts/sweep.sh` includes a `gpu_th_sweep`
 section that drives the (TILE, HALO) ∈ {16,32} × {2,4,6} grid.  After
-running, plot the (TILE, HALO) vs gup_s heatmap by extending plot.py
+running, plot the (TILE, HALO) vs CPE heatmap by extending plot.py
 (currently unimplemented — chart slot reserved).
 
 ## Pre-existing bug in sor3d_omp.c (caught while writing sor3d_pth_temporal)

@@ -15,7 +15,7 @@
     Build: gcc -O1 -std=gnu11 sor2d_rb.c -lrt -lm -o sor2d_rb
     Run:
       ./sor2d_rb <N>                — single run at theoretical omega_opt
-      ./sor2d_rb <N> --sweep        — omega in [0.50, 1.99] in 0.02 steps
+      ./sor2d_rb <N> --sweep        — omega in [0.50, 1.99] in 0.01 steps
       ./sor2d_rb <N> --omega <w>    — single run at a specified omega
       ./sor2d_rb <N> [...] --ppm <p>— also write final field as PPM
 
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
   if (sweep) {
     printf("# N=%d  omega_opt(theory) = %.4f\n", N, omega_opt);
     printf("# omega, iters, seconds, cycles\n");
-    for (double w = 0.50; w < 2.00; w += 0.02) {
+    for (double w = 0.50; w < 2.00; w += 0.01) {
       memcpy(u, init, bytes);
       clock_gettime(CLOCK_REALTIME, &time_start);
       int iters = solve(u, N, w);

@@ -316,10 +316,12 @@ int main(int argc, char **argv)
   double pts = (double)(N-2) * (double)(N-2) * (double)(N-2) * (double)iters;
   printf("N=%d iters=%d B=%d T=%d OMEGA=%.3f GHOST=%d\n",
          N, iters, B, T, omega, GHOST);
-  printf("  baseline : %9.4f s  (%9.2f Mupdates/s, %10.3g cycles)\n",
-         t_base, pts / t_base / 1e6, (double)CPNS * 1.0e9 * t_base);
-  printf("  temporal : %9.4f s  (%9.2f Mupdates/s, %10.3g cycles)  speedup %5.2fx\n",
-         t_temp, pts / t_temp / 1e6, (double)CPNS * 1.0e9 * t_temp,
+  printf("  baseline : %9.4f s  (%10.3g cycles, %7.3f CPE)\n",
+         t_base, (double)CPNS * 1.0e9 * t_base,
+         (double)CPNS * 1.0e9 * t_base / pts);
+  printf("  temporal : %9.4f s  (%10.3g cycles, %7.3f CPE)  speedup %5.2fx\n",
+         t_temp, (double)CPNS * 1.0e9 * t_temp,
+         (double)CPNS * 1.0e9 * t_temp / pts,
          t_base / t_temp);
   printf("  max|base-temp| = %.4e   rel = %.4e\n", diff, rel);
 

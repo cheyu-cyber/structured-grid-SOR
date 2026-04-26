@@ -371,15 +371,20 @@ int main(int argc, char **argv)
     float rel_temp  = (scale > 0) ? diff_temp / scale : 0.0f;
 
     double pts = (double)(N-2) * (double)(N-2) * (double)(N-2) * (double)iters;
-    double base_gups = pts / (base_ms / 1000.0) / 1e9;
-    double temp_gups = pts / (temp_ms / 1000.0) / 1e9;
+    /* CPE (lab convention) at CPNS=2.0 cycles/ns; cycles = ms * CPNS * 1e6. */
+    const double CPNS = 2.0;
+    double base_cycles = (double)base_ms * CPNS * 1.0e6;
+    double temp_cycles = (double)temp_ms * CPNS * 1.0e6;
+    double base_cpe    = base_cycles / pts;
+    double temp_cpe    = temp_cycles / pts;
 
     printf("N=%d  iters=%d  TILE=%d  HALO_T=%d  INTER=%d  super=%d\n",
            N, iters, TILE, HALO_T, INTER, super);
-    printf("  GPU baseline  : %8.3f ms  (%7.3f Gup/s)\n",
-           base_ms, base_gups);
-    printf("  GPU temporal  : %8.3f ms  (%7.3f Gup/s)  speedup vs base %5.2fx\n",
-           temp_ms, temp_gups, base_ms / temp_ms);
+    printf("  GPU baseline  : %8.3f ms  (%10.3g cycles, %7.4f CPE)\n",
+           base_ms, base_cycles, base_cpe);
+    printf("  GPU temporal  : %8.3f ms  (%10.3g cycles, %7.4f CPE)  "
+           "speedup vs base %5.2fx\n",
+           temp_ms, temp_cycles, temp_cpe, base_ms / temp_ms);
     printf("  CPU reference : %8.3f ms\n", cpu_ms);
     printf("  max|base-cpu|  = %.4e  (rel %.2e)\n", diff_base, rel_base);
     printf("  max|temp-cpu|  = %.4e  (rel %.2e)\n", diff_temp, rel_temp);
@@ -387,9 +392,9 @@ int main(int argc, char **argv)
 
     /* Machine-readable: two CSV lines (one per kind) for the sweep harness. */
     printf("CSV,sor3d_gpu,3,%d,%d,0,baseline,TILE=%d;HALO=%d,%.6e,%.6e,%.4e\n",
-           N, iters, TILE, HALO_T, base_ms / 1000.0, base_gups, diff_base);
+           N, iters, TILE, HALO_T, base_ms / 1000.0, base_cpe, diff_base);
     printf("CSV,sor3d_gpu,3,%d,%d,0,temporal,TILE=%d;HALO=%d,%.6e,%.6e,%.4e\n",
-           N, iters, TILE, HALO_T, temp_ms / 1000.0, temp_gups, diff_temp);
+           N, iters, TILE, HALO_T, temp_ms / 1000.0, temp_cpe, diff_temp);
 
     cudaEventDestroy(t_start); cudaEventDestroy(t_stop);
     cudaFree(d_base[0]); cudaFree(d_base[1]);

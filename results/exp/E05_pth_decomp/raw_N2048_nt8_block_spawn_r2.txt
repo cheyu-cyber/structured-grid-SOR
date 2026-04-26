@@ -1,0 +1,5 @@
+N=2048 iters=64 threads=8 mode=block sched=spawn pi=2 pj=4 OMEGA=0.900
+  serial   :    0.2893 s  (   0.926 Gup/s)
+  threaded :    0.0823 s  (   3.255 Gup/s)  speedup  3.51x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor2d_pth_decomp,2,2048,64,8,block,spawn,8.232005e-02,3.254510e+00,0.0000e+00

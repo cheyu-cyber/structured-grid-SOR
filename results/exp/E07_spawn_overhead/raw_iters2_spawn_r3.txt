@@ -1,0 +1,5 @@
+N=512 iters=2 threads=4 mode=strip sched=spawn OMEGA=0.900
+  serial   :    0.0023 s  (   4.7e+06 cycles,   9.026 CPE)
+  threaded :    0.0006 s  (  1.16e+06 cycles,   2.225 CPE)  speedup  4.06x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor2d_pth_decomp,2,512,2,4,strip,spawn,5.786470e-04,2.224710e+00,0.0000e+00

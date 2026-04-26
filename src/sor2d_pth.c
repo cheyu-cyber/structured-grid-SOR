@@ -304,10 +304,12 @@ int main(int argc, char **argv)
   double pts = (double)(N-2) * (double)(N-2) * (double)iters;
   printf("N=%d iters=%d nthreads=%d OMEGA=%.3f GHOST=%d\n",
          N, iters, nthreads, omega, GHOST);
-  printf("  serial  : %9.4f s  (%9.2f Mupdates/s, %10.3g cycles)\n",
-         t_ref, pts / t_ref / 1e6, (double)CPNS * 1.0e9 * t_ref);
-  printf("  pthread : %9.4f s  (%9.2f Mupdates/s, %10.3g cycles)  speedup %5.2fx\n",
-         t_pth, pts / t_pth / 1e6, (double)CPNS * 1.0e9 * t_pth,
+  printf("  serial  : %9.4f s  (%10.3g cycles, %7.3f CPE)\n",
+         t_ref, (double)CPNS * 1.0e9 * t_ref,
+         (double)CPNS * 1.0e9 * t_ref / pts);
+  printf("  pthread : %9.4f s  (%10.3g cycles, %7.3f CPE)  speedup %5.2fx\n",
+         t_pth, (double)CPNS * 1.0e9 * t_pth,
+         (double)CPNS * 1.0e9 * t_pth / pts,
          t_ref / t_pth);
   printf("  max|serial-pthread| = %.4e   rel = %.4e\n", diff, rel);
 

@@ -2,16 +2,18 @@
 """
 Render the four canonical charts from results/results.csv.
 
+Headline metric: CPE (cycles per element, CPNS=2.0).  Smaller = faster.
+
 Charts (each saved to results/figs/*.png):
   1. strong_scaling.png   Speedup vs. thread count, one line per (binary, N).
                           Reference y=x line included.
-  2. variant_heatmap.png  Heatmap of Gup/s by (variant, N).  Variants stack
+  2. variant_heatmap.png  Heatmap of min CPE by (variant, N).  Variants stack
                           serial / pthread / OpenMP / GPU; columns are N
                           regimes (fits-L2 / fits-L3 / exceeds-L3).
   3. decomp_compare.png   Pthreads decomposition study: bar chart of
-                          Gup/s by (mode, schedule) at each N.  Direct
+                          CPE by (mode, schedule) at each N.  Direct
                           Lab-5-Part-4 redo.
-  4. partition_3d.png     3D OMP partitioning study: Gup/s by (mode, N)
+  4. partition_3d.png     3D OMP partitioning study: CPE by (mode, N)
                           at the highest thread count.  Slab vs pencil
                           vs cube at large grids.
 
@@ -42,9 +44,9 @@ except ImportError as e:
 def load(csv_path):
     df = pd.read_csv(csv_path)
     # Numeric coercion: silently drop rows where conversion fails.
-    for c in ("dim", "N", "iters", "threads", "time_s", "gup_s", "max_diff"):
+    for c in ("dim", "N", "iters", "threads", "time_s", "cpe", "max_diff"):
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    df = df.dropna(subset=["time_s", "gup_s"])
+    df = df.dropna(subset=["time_s", "cpe"])
     return df
 
 
@@ -102,11 +104,12 @@ def chart_strong_scaling(df, out):
 
 # ---------------------------------------------------------------- Chart 2 ----
 def chart_variant_heatmap(df, out):
-    """Gup/s heatmap: rows = variant, columns = N.
+    """CPE heatmap: rows = variant, columns = N.
 
     `Variant` collapses (binary, mode) to one label.  We pick, per
-    (variant, N), the best Gup/s seen at any thread count — so the cell
-    answers "what's the best this variant can do at this N".
+    (variant, N), the *min* CPE seen at any thread count — so the cell
+    answers "what's the best this variant can do at this N" (lower CPE
+    = faster).  Colormap is reversed (viridis_r) so dark = fastest.
     """
     # Filter to 2D for now; 3D has different N regime, would distort scale.
     sub = df[df["dim"] == 2].copy()
@@ -117,14 +120,14 @@ def chart_variant_heatmap(df, out):
     sub["variant"] = sub.apply(
         lambda r: f"{r['binary']}:{r['mode']}", axis=1)
 
-    grid = (sub.groupby(["variant", "N"], as_index=False)["gup_s"].max()
-                .pivot(index="variant", columns="N", values="gup_s"))
+    grid = (sub.groupby(["variant", "N"], as_index=False)["cpe"].min()
+                .pivot(index="variant", columns="N", values="cpe"))
     grid = grid.reindex(sorted(grid.index, key=str))
     grid = grid.reindex(columns=sorted(grid.columns))
 
     fig, ax = plt.subplots(figsize=(1.0 + 0.7*len(grid.columns),
                                     0.5 + 0.35*len(grid.index)))
-    im = ax.imshow(grid.values, aspect="auto", cmap="viridis")
+    im = ax.imshow(grid.values, aspect="auto", cmap="viridis_r")
     ax.set_xticks(range(len(grid.columns)))
     ax.set_xticklabels([f"N={int(c)}" for c in grid.columns],
                        rotation=30, ha="right")
@@ -137,8 +140,8 @@ def chart_variant_heatmap(df, out):
                 ax.text(j, i, f"{v:.2f}",
                         ha="center", va="center", color="white", fontsize=8)
     cb = fig.colorbar(im, ax=ax)
-    cb.set_label("Gup/s (best across threads)")
-    ax.set_title("2D variants × grid size — best throughput")
+    cb.set_label("min CPE across threads (cycles/element, lower=faster)")
+    ax.set_title("2D variants × grid size — min CPE")
     fig.tight_layout()
     fig.savefig(out / "variant_heatmap.png", dpi=140)
     plt.close(fig)
@@ -170,8 +173,8 @@ def chart_decomp_compare(df, out):
     # In CSV row positions: mode, extra → here mode=mode, extra=sched.
     sub = sub.rename(columns={"mode": "decomp", "extra": "sched"})
 
-    pivot = (sub.groupby(["decomp", "sched", "N"], as_index=False)["gup_s"]
-                .max())
+    pivot = (sub.groupby(["decomp", "sched", "N"], as_index=False)["cpe"]
+                .min())
 
     Ns = sorted(pivot["N"].unique())
     combos = [("strip", "persistent"), ("strip", "spawn"),
@@ -187,12 +190,12 @@ def chart_decomp_compare(df, out):
             row = pivot[(pivot["decomp"] == m)
                         & (pivot["sched"] == s)
                         & (pivot["N"] == N)]
-            ys.append(row["gup_s"].iloc[0] if len(row) else 0.0)
+            ys.append(row["cpe"].iloc[0] if len(row) else 0.0)
         ax.bar(x + (k - 2.5) * width, ys, width, label=f"{m} / {s}")
 
     ax.set_xticks(x)
     ax.set_xticklabels([f"N={int(N)}" for N in Ns])
-    ax.set_ylabel("Gup/s")
+    ax.set_ylabel("CPE (cycles / element, lower=faster)")
     ax.set_title(f"Pthreads decomposition × scheduling at {nt} threads")
     ax.legend(fontsize=8, ncol=3)
     ax.grid(axis="y", lw=0.3, alpha=0.4)
@@ -205,7 +208,7 @@ def chart_decomp_compare(df, out):
 
 # ---------------------------------------------------------------- Chart 4 ----
 def chart_partition_3d(df, out):
-    """3D OMP partitioning: Gup/s by (mode, N) at the largest thread count."""
+    """3D OMP partitioning: CPE by (mode, N) at the largest thread count."""
     sub = df[df["binary"] == "sor3d_omp_part"].copy()
     if sub.empty:
         print("  (no sor3d_omp_part rows; skipping partition_3d)")
@@ -217,9 +220,9 @@ def chart_partition_3d(df, out):
         print("  (no rows at max threads; skipping partition_3d)")
         return
 
-    pivot = (sub.groupby(["mode", "N"], as_index=False)["gup_s"]
-                .max()
-                .pivot(index="mode", columns="N", values="gup_s"))
+    pivot = (sub.groupby(["mode", "N"], as_index=False)["cpe"]
+                .min()
+                .pivot(index="mode", columns="N", values="cpe"))
     Ns = sorted(pivot.columns)
     modes = ["slab", "pencil", "cube"]
 
@@ -232,7 +235,7 @@ def chart_partition_3d(df, out):
         ax.bar(x + (k - 1) * width, ys, width, label=m)
     ax.set_xticks(x)
     ax.set_xticklabels([f"N={int(N)}" for N in Ns])
-    ax.set_ylabel("Gup/s")
+    ax.set_ylabel("CPE (cycles / element, lower=faster)")
     ax.set_title(f"3D OMP partitioning at {nt} threads")
     ax.legend()
     ax.grid(axis="y", lw=0.3, alpha=0.4)

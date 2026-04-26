@@ -99,13 +99,17 @@ for nt in 1 2 4 8 16; do
         | tee $DIR/raw_nt${nt}.txt
 done
 
-# Pull out the (baseline, temporal) Mupdates/s for each thread count.
+# Pull out (baseline, temporal) time + compute CPE for each thread count.
 {
-    echo "threads,kind,time_s,gup_s"
+    echo "threads,kind,time_s,cpe"
     for nt in 1 2 4 8 16; do
-        awk -v nt=$nt '
-            /baseline.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print nt",baseline,"t","g/1000 }
-            /temporal.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print nt",temporal,"t","g/1000 }
+        awk -v nt=$nt -v N=4098 -v iters=64 '
+            /baseline[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+                cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+                print nt",baseline,"t","cpe }
+            /temporal[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+                cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+                print nt",temporal,"t","cpe }
         ' $DIR/raw_nt${nt}.txt
     done
 } > $DIR/data.csv
@@ -152,16 +156,20 @@ Surprise: <if any>
 DIR=results/exp/E02_size_sweep_2d
 mkdir -p $DIR
 > $DIR/data.csv
-echo "N,kind,time_s,gup_s,bytes_pair_mb" > $DIR/data.csv
+echo "N,kind,time_s,cpe,bytes_pair_mb" > $DIR/data.csv
 
 for N in 256 512 1024 2048 4098; do
     OMP_NUM_THREADS=8 build/sor2d_omp $N 64 128 8 \
         | tee $DIR/raw_N${N}.txt
 
     bytes=$(awk -v N=$N 'BEGIN{printf "%.1f", 2 * N * N * 4 / (1024*1024)}')
-    awk -v N=$N -v b=$bytes '
-        /baseline.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print N",baseline,"t","g/1000","b }
-        /temporal.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print N",temporal,"t","g/1000","b }
+    awk -v N=$N -v b=$bytes -v iters=64 '
+        /baseline[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+            cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+            print N",baseline,"t","cpe","b }
+        /temporal[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+            cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+            print N",temporal,"t","cpe","b }
     ' $DIR/raw_N${N}.txt >> $DIR/data.csv
 done
 ```
@@ -198,15 +206,19 @@ or exceeds L2 per thread.
 ```bash
 DIR=results/exp/E03_block_size
 mkdir -p $DIR
-echo "B,kind,time_s,gup_s" > $DIR/data.csv
+echo "B,kind,time_s,cpe" > $DIR/data.csv
 
 for B in 16 32 64 128 256 512; do
     # iters must be multiple of T=4 (yes for 64).
     OMP_NUM_THREADS=8 build/sor2d_omp 2048 64 $B 4 \
         | tee $DIR/raw_B${B}.txt
-    awk -v B=$B '
-        /baseline.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print B",baseline,"t","g/1000 }
-        /temporal.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print B",temporal,"t","g/1000 }
+    awk -v B=$B -v N=2048 -v iters=64 '
+        /baseline[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+            cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+            print B",baseline,"t","cpe }
+        /temporal[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+            cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+            print B",temporal,"t","cpe }
     ' $DIR/raw_B${B}.txt >> $DIR/data.csv
 done
 ```
@@ -216,9 +228,9 @@ done
   only used by the temporal kernel).  If they vary much, system noise.
 - Temporal should peak somewhere in {64, 128, 256} and degrade outside.
 
-**Notes template**: same shape as above; record best B and its Gup/s.
+**Notes template**: same shape as above; record best B and its CPE.
 
-**STATUS update**: `E03: done — best B=<>, peak Gup/s=<>`
+**STATUS update**: `E03: done — best B=<>, min CPE=<>`
 
 ---
 
@@ -235,14 +247,18 @@ threads=8.
 DIR=results/exp/E04_temporal_depth
 mkdir -p $DIR
 B=128                                       # update from E03 if known
-echo "T,kind,time_s,gup_s" > $DIR/data.csv
+echo "T,kind,time_s,cpe" > $DIR/data.csv
 
 for T in 1 2 4 8 16; do
     OMP_NUM_THREADS=8 build/sor2d_omp 2048 64 $B $T \
         | tee $DIR/raw_T${T}.txt
-    awk -v T=$T '
-        /baseline.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print T",baseline,"t","g/1000 }
-        /temporal.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print T",temporal,"t","g/1000 }
+    awk -v T=$T -v N=2048 -v iters=64 '
+        /baseline[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+            cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+            print T",baseline,"t","cpe }
+        /temporal[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+            cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+            print T",temporal,"t","cpe }
     ' $DIR/raw_T${T}.txt >> $DIR/data.csv
 done
 ```
@@ -266,7 +282,7 @@ done
 ```bash
 DIR=results/exp/E05_pth_decomp
 mkdir -p $DIR
-echo "N,threads,mode,sched,time_s,gup_s" > $DIR/data.csv
+echo "N,threads,mode,sched,time_s,cpe" > $DIR/data.csv
 
 for nt in 1 2 4 8; do
     for mode in strip interleaved block; do
@@ -305,7 +321,7 @@ done
 ```bash
 DIR=results/exp/E06_3d_partition
 mkdir -p $DIR
-echo "N,threads,mode,time_s,gup_s" > $DIR/data.csv
+echo "N,threads,mode,time_s,cpe" > $DIR/data.csv
 
 for N in 66 130 258; do
     for nt in 1 2 4 8; do
@@ -420,7 +436,7 @@ of all three).
 ```bash
 DIR=results/exp/E09_gpu_th_sweep
 mkdir -p $DIR
-echo "tile,halo,kind,time_s,gup_s" > $DIR/data.csv
+echo "tile,halo,kind,time_s,cpe" > $DIR/data.csv
 
 for tile in 16 32; do
     for halo in 2 4 6; do
@@ -440,12 +456,12 @@ done
 ```
 
 **Quick checks**:
-- Best Gup/s is typically at TILE=32, HALO=4 (matches prior session
+- Best CPE is typically at TILE=32, HALO=4 (matches prior session
   defaults).
 - Higher HALO at fixed TILE helps until the halo:interior ratio
   dominates.
 
-**STATUS update**: `E09: done — best (TILE,HALO)=<>, <>Gup/s`
+**STATUS update**: `E09: done — best (TILE,HALO)=<>, min CPE=<>`
 
 ---
 
@@ -460,7 +476,7 @@ power-of-2 cache aliasing).
 ```bash
 DIR=results/exp/E10_gpu_n_sweep
 mkdir -p $DIR
-echo "N,kind,time_s,gup_s" > $DIR/data.csv
+echo "N,kind,time_s,cpe" > $DIR/data.csv
 
 for N in 258 1026 2050 4098; do
     tag="N${N}"
@@ -471,7 +487,7 @@ for N in 258 1026 2050 4098; do
 done
 
 # Same for 3D GPU.
-echo "N,kind,time_s,gup_s" > $DIR/data_3d.csv
+echo "N,kind,time_s,cpe" > $DIR/data_3d.csv
 for N in 66 130 258; do
     tag="3d_N${N}"
     build/sor3d_gpu $N 16 | tee $DIR/raw_${tag}.txt   # iters=16 (mult of HALO=2)
@@ -508,20 +524,28 @@ DIR=results/exp/E11_headline
 mkdir -p $DIR
 
 # Order: serial 2D, OMP 2D base+temp, pthreads-temporal 2D base+temp, GPU 2D base+temp.
-echo "tier,kind,time_s,gup_s" > $DIR/data.csv
+echo "tier,kind,time_s,cpe" > $DIR/data.csv
 
 # 1. Serial CPU.
 build/sor2d_cpu 2050 96 128 8 | tee $DIR/raw_cpu.txt
-awk '
-    /baseline.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print "serial,baseline,"t","g/1000 }
-    /temporal.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print "serial,temporal,"t","g/1000 }
+awk -v N=2050 -v iters=96 '
+    /baseline[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+        cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+        print "serial,baseline,"t","cpe }
+    /temporal[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+        cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+        print "serial,temporal,"t","cpe }
 ' $DIR/raw_cpu.txt >> $DIR/data.csv
 
 # 2. OMP at 8 threads.
 OMP_NUM_THREADS=8 build/sor2d_omp 2050 96 128 8 | tee $DIR/raw_omp.txt
-awk '
-    /baseline.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print "omp,baseline,"t","g/1000 }
-    /temporal.*Mupdates\/s/ { for (i=1;i<=NF;i++) if ($i==":") t=$(i+1); for (i=1;i<=NF;i++) if ($i=="Mupdates/s,") g=$(i-1); print "omp,temporal,"t","g/1000 }
+awk -v N=2050 -v iters=96 '
+    /baseline[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+        cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+        print "omp,baseline,"t","cpe }
+    /temporal[[:space:]]*:/ { for(i=1;i<=NF;i++) if($i==":") t=$(i+1);
+        cpe = t * 2.0 * 1e9 / ((N-2)*(N-2)*iters);
+        print "omp,temporal,"t","cpe }
 ' $DIR/raw_omp.txt >> $DIR/data.csv
 
 # 3. Pthreads temporal at 8 threads.
@@ -536,14 +560,14 @@ cat $DIR/data.csv
 ```
 
 **Quick checks**:
-- Order of magnitude expected (Gup/s, depending on machine):
-  serial ~1–2 / OMP-8 ~10–20 / pthreads-8 ~10–20 / GPU baseline ~50–100
-  / GPU temporal ~100–200.
+- Order of magnitude expected (CPE, lower=faster, depending on machine):
+  serial CPE ~1–2 / OMP-8 ~0.1–0.2 / pthreads-8 ~0.1–0.2 / GPU baseline ~0.02–0.05
+  / GPU temporal ~0.01–0.02 (these are rough — depends on machine and CPNS).
 - Temporal on every tier should beat the baseline of that tier (or
   match, single-threaded — and that's the reportable "single-thread
   CPU isn't DRAM-bound enough for temporal to help" finding).
 
-**STATUS update**: `E11: done — fastest = <tier> <kind> at <Gup/s>`
+**STATUS update**: `E11: done — fastest = <tier> <kind> at min CPE=<>`
 
 ---
 

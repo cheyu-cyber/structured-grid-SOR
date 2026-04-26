@@ -1,0 +1,9 @@
+threads,kind,time_s,cpe,cpe_speedup_vs_1t
+1,baseline,1.5684,2.921,1.000
+1,temporal,1.4796,2.756,1.000
+2,baseline,1.2689,2.364,1.236
+2,temporal,0.8118,1.512,1.823
+4,baseline,0.6435,1.199,2.437
+4,temporal,0.4457,0.830,3.320
+8,baseline,0.3496,0.651,4.486
+8,temporal,0.2023,0.377,7.314

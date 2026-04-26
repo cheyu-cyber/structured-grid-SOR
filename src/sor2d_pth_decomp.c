@@ -445,23 +445,27 @@ int main(int argc, char **argv)
     data_t rel   = (scale > 0.0) ? diff / scale : 0.0;
 
     double pts  = (double)(N-2) * (double)(N-2) * (double)iters;
-    double gups = pts / t_pth / 1e9;
+    /* CPE (lab convention): wall-clock cycles per output cell at CPNS=2.0. */
+    const double CPNS = 2.0;
+    double cpe_ref = CPNS * 1.0e9 * t_ref / pts;
+    double cpe_pth = CPNS * 1.0e9 * t_pth / pts;
 
     /* Human-readable. */
     printf("N=%d iters=%d threads=%d mode=%s sched=%s",
            N, iters, nthreads, mode_name(mode), sched_name(sched));
     if (mode == MODE_BLOCK) printf(" pi=%d pj=%d", pi, pj);
     printf(" OMEGA=%.3f\n", (double)OMEGA);
-    printf("  serial   : %9.4f s  (%8.3f Gup/s)\n", t_ref, pts/t_ref/1e9);
-    printf("  threaded : %9.4f s  (%8.3f Gup/s)  speedup %5.2fx\n",
-           t_pth, gups, t_ref / t_pth);
+    printf("  serial   : %9.4f s  (%10.3g cycles, %7.3f CPE)\n",
+           t_ref, CPNS * 1.0e9 * t_ref, cpe_ref);
+    printf("  threaded : %9.4f s  (%10.3g cycles, %7.3f CPE)  speedup %5.2fx\n",
+           t_pth, CPNS * 1.0e9 * t_pth, cpe_pth, t_ref / t_pth);
     printf("  max|serial-threaded| = %.4e   rel = %.4e\n",
            (double)diff, (double)rel);
 
     /* Machine-readable: one CSV line that sweep.sh / plot.py grep. */
     printf("CSV,sor2d_pth_decomp,2,%d,%d,%d,%s,%s,%.6e,%.6e,%.4e\n",
            N, iters, nthreads, mode_name(mode), sched_name(sched),
-           t_pth, gups, (double)diff);
+           t_pth, cpe_pth, (double)diff);
 
     if (ppm_path) {
         if (write_ppm_gray(ppm_path, pth_out, N) == 0)

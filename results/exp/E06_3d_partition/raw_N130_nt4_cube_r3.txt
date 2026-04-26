@@ -1,0 +1,6 @@
+OMP_NUM_THREADS=4
+N=130 iters=20 threads=4 mode=cube B=32 OMEGA=0.900
+  serial(1t):    0.0463 s  (  9.27e+07 cycles,   2.209 CPE)
+  threaded  :    0.0171 s  (  3.42e+07 cycles,   0.817 CPE)  speedup  2.71x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor3d_omp_part,3,130,20,4,cube,B=32,1.712326e-02,8.165008e-01,0.0000e+00

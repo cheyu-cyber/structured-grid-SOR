@@ -124,6 +124,6 @@ buffers, so there is no `O(N^d)` copy between super-steps.
 
 `report.md` has the full write-up: single-thread CPU, OpenMP thread-scaling
 to 16 threads (1.82× temporal speedup at 16 threads, N=4098), and V100 GPU
-numbers (~130 Gup/s temporal, ~2–3× over the coalesced Lab-7-style
+numbers (~0.015 (CPE) temporal, ~2–3× over the coalesced Lab-7-style
 baseline at realistic `N`). This README is the quick-start; `report.md` is
 the detail.

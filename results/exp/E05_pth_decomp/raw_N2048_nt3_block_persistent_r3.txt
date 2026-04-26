@@ -1,0 +1,5 @@
+N=2048 iters=64 threads=3 mode=block sched=persistent pi=1 pj=3 OMEGA=0.900
+  serial   :    0.3056 s  (   0.877 Gup/s)
+  threaded :    0.1297 s  (   2.065 Gup/s)  speedup  2.36x
+  max|serial-threaded| = 0.0000e+00   rel = 0.0000e+00
+CSV,sor2d_pth_decomp,2,2048,64,3,block,persistent,1.297472e-01,2.064873e+00,0.0000e+00
