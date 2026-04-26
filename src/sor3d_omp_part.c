@@ -35,15 +35,15 @@
 #include <math.h>
 #include <omp.h>
 
-#define MINVAL  0.0f
-#define MAXVAL  10.0f
-#define OMEGA   0.9f
+#define MINVAL  0.0
+#define MAXVAL  10.0
+#define OMEGA   0.9
 
-typedef float data_t;
+typedef double data_t;
 
 #define IDX3(i,j,k,N) (((size_t)(i)*(N) + (j))*(N) + (k))
 
-static const data_t INV6 = 1.0f / 6.0f;
+static const data_t INV6 = 1.0 / 6.0;
 
 /* -=-=-=-=- Time measurement by clock_gettime() -=-=-=-=- */
 static double interval(struct timespec start, struct timespec end)
@@ -57,25 +57,25 @@ static double interval(struct timespec start, struct timespec end)
 
 static double fRand(double a, double b)
 {
-    double f = (double)rand() / (double)RAND_MAX;
+    double f = (double)random() / (double)RAND_MAX;
     return a + f * (b - a);
 }
 
 static void init_array(data_t *a, long len, unsigned seed)
 {
-    srand(seed);
+    srandom(seed);
     for (long i = 0; i < len; i++)
         a[i] = (data_t) fRand((double)MINVAL, (double)MAXVAL);
 }
 
 static data_t max_diff(const data_t *a, const data_t *b, long len)
 {
-    data_t mx = 0.0f;
+    data_t mx = 0.0;
     int bad = 0;
     for (long i = 0; i < len; i++) {
         data_t av = a[i], bv = b[i];
         if (!isfinite(av) || !isfinite(bv)) { bad++; continue; }
-        data_t d = fabsf(av - bv);
+        data_t d = fabs(av - bv);
         if (d > mx) mx = d;
     }
     if (bad) {
@@ -87,9 +87,9 @@ static data_t max_diff(const data_t *a, const data_t *b, long len)
 
 static data_t max_val(const data_t *a, long len)
 {
-    data_t mx = 0.0f;
+    data_t mx = 0.0;
     for (long i = 0; i < len; i++) {
-        data_t v = fabsf(a[i]);
+        data_t v = fabs(a[i]);
         if (v > mx) mx = v;
     }
     return mx;
@@ -114,7 +114,7 @@ static void carry_boundaries_3d(int N, const data_t *src, data_t *dst)
 /* ============================== Slab partition ============================= */
 /* Parallel over outer i only.  Each thread does a contiguous slab of i,
  * full j and k.  Inner loops have unit-stride k accesses, full row reuse. */
-static void sweep_slab(const data_t *src, data_t *dst, int N, float omega)
+static void sweep_slab(const data_t *src, data_t *dst, int N, double omega)
 {
     #pragma omp parallel for schedule(static)
     for (int i = 1; i < N - 1; i++) {
@@ -138,7 +138,7 @@ static void sweep_slab(const data_t *src, data_t *dst, int N, float omega)
 
 /* ============================ Pencil partition ============================= */
 /* `collapse(2)` over (i, j).  Each thread gets pencils of unit-stride k. */
-static void sweep_pencil(const data_t *src, data_t *dst, int N, float omega)
+static void sweep_pencil(const data_t *src, data_t *dst, int N, double omega)
 {
     #pragma omp parallel for collapse(2) schedule(static)
     for (int i = 1; i < N - 1; i++) {
@@ -165,7 +165,7 @@ static void sweep_pencil(const data_t *src, data_t *dst, int N, float omega)
  * is a per-iteration unit; threads pull tiles dynamically.  This is the
  * "max cache locality, max halo overhead" extreme. */
 static void sweep_cube(const data_t *src, data_t *dst,
-                       int N, int B, float omega)
+                       int N, int B, double omega)
 {
     int nti = (N - 2 + B - 1) / B;
     int ntj = (N - 2 + B - 1) / B;
@@ -215,7 +215,7 @@ static const char *part_name(part_t p)
 }
 
 static double run_partitioned(part_t mode, int N, int iters, int B,
-                              float omega, data_t *a, data_t *b,
+                              double omega, data_t *a, data_t *b,
                               data_t **out)
 {
     data_t *src = a, *dst = b;
@@ -238,7 +238,7 @@ static double run_partitioned(part_t mode, int N, int iters, int B,
 /* Single-threaded reference: same kernel as slab, OMP simply won't fire
  * with one thread.  Build with -fopenmp anyway so the reference and the
  * threaded run share the same compiler-generated stencil code. */
-static double run_serial_ref(int N, int iters, float omega,
+static double run_serial_ref(int N, int iters, double omega,
                              data_t *a, data_t *b, data_t **out)
 {
     int saved = omp_get_max_threads();
@@ -310,7 +310,7 @@ int main(int argc, char **argv)
     /* ---- Validation ---- */
     data_t diff  = max_diff(ref_out, omp_out, (long)N*N*N);
     data_t scale = max_val(ref_out, (long)N*N*N);
-    data_t rel   = (scale > 0.f) ? diff / scale : 0.f;
+    data_t rel   = (scale > 0.0) ? diff / scale : 0.0;
 
     double pts  = (double)(N-2) * (double)(N-2) * (double)(N-2) * (double)iters;
     double gups = pts / t_omp / 1e9;

@@ -34,15 +34,15 @@
 #include <math.h>
 #include <pthread.h>
 
-#define MINVAL  0.0f
-#define MAXVAL 10.0f
-#define OMEGA   0.9f
+#define MINVAL  0.0
+#define MAXVAL 10.0
+#define OMEGA   0.9
 
-typedef float data_t;
+typedef double data_t;
 
 #define IDX3(i,j,k,N) (((size_t)(i)*(N) + (j))*(N) + (k))
 
-static const float INV6 = 1.0f / 6.0f;
+static const double INV6 = 1.0 / 6.0;
 
 /* -=-=-=-=- Time, init, validation -=-=-=-=- */
 static double interval(struct timespec a, struct timespec b)
@@ -56,25 +56,25 @@ static double interval(struct timespec a, struct timespec b)
 
 static double fRand(double a, double b)
 {
-    double f = (double)rand() / (double)RAND_MAX;
+    double f = (double)random() / (double)RAND_MAX;
     return a + f * (b - a);
 }
 
 static void init_array(data_t *arr, long len, unsigned seed)
 {
-    srand(seed);
+    srandom(seed);
     for (long i = 0; i < len; i++)
         arr[i] = (data_t) fRand((double)MINVAL, (double)MAXVAL);
 }
 
 static data_t max_diff(const data_t *a, const data_t *b, long len)
 {
-    data_t mx = 0.0f;
+    data_t mx = 0.0;
     int bad = 0;
     for (long i = 0; i < len; i++) {
         data_t av = a[i], bv = b[i];
         if (!isfinite(av) || !isfinite(bv)) { bad++; continue; }
-        data_t d = fabsf(av - bv);
+        data_t d = fabs(av - bv);
         if (d > mx) mx = d;
     }
     if (bad) {
@@ -86,9 +86,9 @@ static data_t max_diff(const data_t *a, const data_t *b, long len)
 
 static data_t max_val(const data_t *a, long len)
 {
-    data_t mx = 0.0f;
+    data_t mx = 0.0;
     for (long i = 0; i < len; i++) {
-        data_t v = fabsf(a[i]);
+        data_t v = fabs(a[i]);
         if (v > mx) mx = v;
     }
     return mx;
@@ -116,7 +116,7 @@ static void copy_boundaries_3d(int N, const data_t *src, data_t *dst,
 typedef struct {
     int tid, nthreads;
     int N, iters;
-    float omega;
+    double omega;
     data_t **psrc, **pdst;
     pthread_barrier_t *bar;
 } base_args_t;
@@ -166,7 +166,7 @@ typedef struct {
     int tid, nthreads;
     int N, B, T;
     int super;
-    float omega;
+    double omega;
     data_t **psrc, **pdst;
     pthread_barrier_t *bar;
 } temp_args_t;
@@ -176,7 +176,7 @@ static void *temp_worker(void *p)
     temp_args_t *a = (temp_args_t*) p;
     const int N = a->N, B = a->B, T = a->T, S = B + 2 * T;
     const int tid = a->tid, nt = a->nthreads;
-    const float omega = a->omega;
+    const double omega = a->omega;
 
     /* Per-thread scratch: two ping-pong buffers, S^3 each. */
     size_t sbytes = (size_t)S * S * S * sizeof(data_t);
@@ -301,7 +301,7 @@ static void *temp_worker(void *p)
 }
 
 /* ============================ Serial reference ============================ */
-static double run_serial(int N, int iters, float omega,
+static double run_serial(int N, int iters, double omega,
                          data_t *a, data_t *b, data_t **out)
 {
     data_t *src = a, *dst = b;
@@ -429,8 +429,8 @@ int main(int argc, char **argv)
     data_t diff_b = max_diff(ref_out, base_out, (long)N*N*N);
     data_t diff_t = max_diff(ref_out, temp_out, (long)N*N*N);
     data_t scale  = max_val(ref_out, (long)N*N*N);
-    data_t rel_b  = (scale > 0.f) ? diff_b / scale : 0.f;
-    data_t rel_t  = (scale > 0.f) ? diff_t / scale : 0.f;
+    data_t rel_b  = (scale > 0.0) ? diff_b / scale : 0.0;
+    data_t rel_t  = (scale > 0.0) ? diff_t / scale : 0.0;
 
     double pts = (double)(N-2) * (double)(N-2) * (double)(N-2) * (double)iters;
 

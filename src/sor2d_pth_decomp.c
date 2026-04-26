@@ -42,11 +42,11 @@
 #include <math.h>
 #include <pthread.h>
 
-#define MINVAL 0.0f
-#define MAXVAL 10.0f
-#define OMEGA  0.9f
+#define MINVAL 0.0
+#define MAXVAL 10.0
+#define OMEGA  0.9
 
-typedef float data_t;
+typedef double data_t;
 
 /* -=-=-=-=- Time measurement by clock_gettime() -=-=-=-=- */
 static double interval(struct timespec start, struct timespec end)
@@ -60,25 +60,25 @@ static double interval(struct timespec start, struct timespec end)
 
 static double fRand(double a, double b)
 {
-    double f = (double)rand() / (double)RAND_MAX;
+    double f = (double)random() / (double)RAND_MAX;
     return a + f * (b - a);
 }
 
 static void init_array(data_t *a, long len, unsigned seed)
 {
-    srand(seed);
+    srandom(seed);
     for (long i = 0; i < len; i++)
         a[i] = (data_t) fRand((double)MINVAL, (double)MAXVAL);
 }
 
 static data_t max_diff(const data_t *a, const data_t *b, long len)
 {
-    data_t mx = 0.0f;
+    data_t mx = 0.0;
     int bad = 0;
     for (long i = 0; i < len; i++) {
         data_t av = a[i], bv = b[i];
         if (!isfinite(av) || !isfinite(bv)) { bad++; continue; }
-        data_t d = fabsf(av - bv);
+        data_t d = fabs(av - bv);
         if (d > mx) mx = d;
     }
     if (bad) {
@@ -90,9 +90,9 @@ static data_t max_diff(const data_t *a, const data_t *b, long len)
 
 static data_t max_val(const data_t *a, long len)
 {
-    data_t mx = 0.0f;
+    data_t mx = 0.0;
     for (long i = 0; i < len; i++) {
-        data_t v = fabsf(a[i]);
+        data_t v = fabs(a[i]);
         if (v > mx) mx = v;
     }
     return mx;
@@ -108,7 +108,7 @@ static int write_ppm_gray(const char *path, const data_t *a, int N)
         if (v > mx) mx = v;
     }
     if (!isfinite(mn) || mn > mx) return -1;
-    data_t scale = (mx > mn) ? 255.0f / (mx - mn) : 0.0f;
+    data_t scale = (mx > mn) ? 255.0 / (mx - mn) : 0.0;
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
     fprintf(f, "P5\n%d %d\n255\n", N, N);
@@ -173,7 +173,7 @@ static void thread_region(int tid, int nthreads, int N, decomp_t mode,
 }
 
 /* One sweep on this thread's region (no boundary cells, no swap). */
-static void do_sweep(int tid, int nthreads, int N, float omega,
+static void do_sweep(int tid, int nthreads, int N, double omega,
                      decomp_t mode, int pi, int pj,
                      const data_t *src, data_t *dst)
 {
@@ -188,7 +188,7 @@ static void do_sweep(int tid, int nthreads, int N, float omega,
         data_t       *dc = dst + (size_t) i    * N;
         for (int j = j_start; j < j_end; j++) {
             data_t s = sc[j];
-            data_t nb = 0.25f * (sm[j] + sp[j] + sc[j-1] + sc[j+1]);
+            data_t nb = 0.25 * (sm[j] + sp[j] + sc[j-1] + sc[j+1]);
             dc[j] = s - omega * (s - nb);
         }
     }
@@ -212,7 +212,7 @@ static void carry_boundaries(int N, const data_t *src, data_t *dst)
 typedef struct {
     int tid, nthreads;
     int N, iters;
-    float omega;
+    double omega;
     decomp_t mode;
     int pi, pj;
     /* Double-pointers so thread 0's swap is visible to all threads. */
@@ -239,7 +239,7 @@ static void *persist_worker(void *p)
 }
 
 /* Returns wall time, leaves final result buffer pointer in *out. */
-static double run_persistent(int N, int iters, int nthreads, float omega,
+static double run_persistent(int N, int iters, int nthreads, double omega,
                              decomp_t mode, int pi, int pj,
                              data_t *a, data_t *b, data_t **out)
 {
@@ -277,7 +277,7 @@ static double run_persistent(int N, int iters, int nthreads, float omega,
 typedef struct {
     int tid, nthreads;
     int N;
-    float omega;
+    double omega;
     decomp_t mode;
     int pi, pj;
     const data_t *src;
@@ -292,7 +292,7 @@ static void *spawn_worker(void *p)
     return NULL;
 }
 
-static double run_spawn(int N, int iters, int nthreads, float omega,
+static double run_spawn(int N, int iters, int nthreads, double omega,
                         decomp_t mode, int pi, int pj,
                         data_t *a, data_t *b, data_t **out)
 {
@@ -326,7 +326,7 @@ static double run_spawn(int N, int iters, int nthreads, float omega,
 }
 
 /* ============================ Serial reference ============================ */
-static double run_serial(int N, int iters, float omega,
+static double run_serial(int N, int iters, double omega,
                          data_t *a, data_t *b, data_t **out)
 {
     data_t *src = a, *dst = b;
@@ -340,7 +340,7 @@ static double run_serial(int N, int iters, float omega,
             data_t       *dc = dst + (size_t) i    * N;
             for (int j = 1; j < N-1; j++) {
                 data_t s = sc[j];
-                data_t nb = 0.25f * (sm[j] + sp[j] + sc[j-1] + sc[j+1]);
+                data_t nb = 0.25 * (sm[j] + sp[j] + sc[j-1] + sc[j+1]);
                 dc[j] = s - omega * (s - nb);
             }
         }
@@ -442,7 +442,7 @@ int main(int argc, char **argv)
     /* ---- Validation ---- */
     data_t diff  = max_diff(ref_out, pth_out, (long)N*N);
     data_t scale = max_val(ref_out, (long)N*N);
-    data_t rel   = (scale > 0.f) ? diff / scale : 0.f;
+    data_t rel   = (scale > 0.0) ? diff / scale : 0.0;
 
     double pts  = (double)(N-2) * (double)(N-2) * (double)iters;
     double gups = pts / t_pth / 1e9;
