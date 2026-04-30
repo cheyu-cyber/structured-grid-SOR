@@ -1209,8 +1209,8 @@ nvcc -O2 src/sor3d_gpu.cu -o build/sor3d_gpu
 # Or just `make && make gpu`. The project-root Makefile does the same.
 \end{lstlisting}
 
-\noindent Why \texttt{-O1} and not \texttt{-O3}: matches the EC527
-lab convention (verified by \texttt{grep -r "gcc -O" EC527/Lab*}).
+\noindent Why \texttt{-O1} and not \texttt{-O3}: 
+
 The lab CPE numbers in Bryant--O'Hallaron all assume \texttt{-O1}
 to keep the compiler from auto-vectorising and complicating the
 analysis.  We'd absolutely use \texttt{-O3 -march=native -ffast-math}

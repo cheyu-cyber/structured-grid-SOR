@@ -1,0 +1,107 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Description of the Algorithm}{1}{section.1}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Mathematical foundation}{1}{subsection.1.1}}
+\newlabel{eq:laplace}{{1}{1}{Mathematical foundation}{equation.1.1}{}}
+\newlabel{eq:5point}{{2}{1}{Mathematical foundation}{equation.1.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The 5-point Laplacian stencil. Each interior cell averages its four orthogonal neighbours.\relax }}{1}{figure.caption.1}}
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:stencil}{{1}{1}{The 5-point Laplacian stencil. Each interior cell averages its four orthogonal neighbours.\relax }{figure.caption.1}{}}
+\newlabel{eq:sor}{{3}{1}{Mathematical foundation}{equation.1.3}{}}
+\newlabel{eq:omega-opt}{{4}{1}{Mathematical foundation}{equation.1.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}The specific algorithmic form used}{2}{subsection.1.2}}
+\@writefile{toc}{\contentsline {paragraph}{Red-black SOR.}{2}{section*.2}}
+\@writefile{toc}{\contentsline {paragraph}{Jacobi ping-pong.}{2}{section*.3}}
+\@writefile{toc}{\contentsline {paragraph}{Temporal blocking (the shrinking trapezoid).}{2}{section*.4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Spatial vs temporal blocking.\relax }}{3}{figure.caption.5}}
+\newlabel{fig:spatial-blocking}{{2}{3}{Spatial vs temporal blocking.\relax }{figure.caption.5}{}}
+\newlabel{fig:halo-time}{{2}{3}{Spatial vs temporal blocking.\relax }{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Implementation reality check}{3}{subsection.1.3}}
+\newlabel{sec:reality-check}{{1.3}{3}{Implementation reality check}{subsection.1.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Two paths to parallelism.}{3}{section*.6}}
+\@writefile{toc}{\contentsline {paragraph}{Validation strategy.}{3}{section*.7}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Scalar CPU Version}{3}{section.2}}
+\newlabel{sec:cpu}{{2}{3}{Scalar CPU Version}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The hot inner loop}{3}{subsection.2.1}}
+\@writefile{toc}{\contentsline {paragraph}{Inner-loop micro-variants.}{3}{section*.9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Roofline-style throughput curve. AI $\approx $ 0.5--0.75 puts the stencil where the red arrow lands. On the bandwidth-bound diagonal, well below the peak-compute plateau.\relax }}{4}{figure.caption.8}}
+\newlabel{fig:roofline}{{3}{4}{Roofline-style throughput curve. AI $\approx $ 0.5--0.75 puts the stencil where the red arrow lands. On the bandwidth-bound diagonal, well below the peak-compute plateau.\relax }{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}The full sweep}{4}{subsection.2.2}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Loose ends}{4}{subsection.2.3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Stitching it together (real code)}{4}{subsection.2.4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Code and Results}{5}{subsection.2.5}}
+\newlabel{sec:cpu-results}{{2.5}{5}{Code and Results}{subsection.2.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.1}Discussion of CPE}{5}{subsubsection.2.5.1}}
+\@writefile{toc}{\contentsline {paragraph}{Size sweep.}{5}{section*.10}}
+\@writefile{toc}{\contentsline {paragraph}{Block size sweep.}{5}{section*.12}}
+\@writefile{toc}{\contentsline {paragraph}{Halo / T sweep.}{5}{section*.14}}
+\@writefile{toc}{\contentsline {paragraph}{Strong scaling and decomposition.}{5}{section*.17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 2D OMP size sweep at 8 threads, $B{=}128$, $T{=}8$, iters=64. The L3$\to $DRAM crossover lands between $N{=}1024$ and $N{=}2048$: baseline CPE rises from 0.464 to 0.667 as the working set exceeds 38\tmspace  +\thinmuskip {.1667em}MB. Temporal stays at $\sim $0.35 across $N{=}1024$\tmspace  +\thinmuskip {.1667em}--$\tmspace  +\thinmuskip {.1667em}4098$ (L2-resident on its scratch) and wins 1.93$\times $ at $N{=}2048$. Below L3 temporal loses: per-tile malloc + halo work cancel the savings on a working set the baseline already had in cache.\relax }}{6}{figure.caption.11}}
+\newlabel{fig:size-sweep}{{4}{6}{2D OMP size sweep at 8 threads, $B{=}128$, $T{=}8$, iters=64. The L3$\to $DRAM crossover lands between $N{=}1024$ and $N{=}2048$: baseline CPE rises from 0.464 to 0.667 as the working set exceeds 38\,MB. Temporal stays at $\sim $0.35 across $N{=}1024$\,--$\,4098$ (L2-resident on its scratch) and wins 1.93$\times $ at $N{=}2048$. Below L3 temporal loses: per-tile malloc + halo work cancel the savings on a working set the baseline already had in cache.\relax }{figure.caption.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Block-size sweep at $N{=}2048$, $T{=}4$, 8 threads. Temporal has a wide plateau across $B{\in }[24, 256]$ at CPE $\sim $0.39, then falls off a cliff at $B{\geq }384$. Red dashed line is the L2-fit threshold ($B \leq 297$); beyond that, scratch spills L2.\relax }}{6}{figure.caption.13}}
+\newlabel{fig:block-sweep}{{5}{6}{Block-size sweep at $N{=}2048$, $T{=}4$, 8 threads. Temporal has a wide plateau across $B{\in }[24, 256]$ at CPE $\sim $0.39, then falls off a cliff at $B{\geq }384$. Red dashed line is the L2-fit threshold ($B \leq 297$); beyond that, scratch spills L2.\relax }{figure.caption.13}{}}
+\@writefile{toc}{\contentsline {paragraph}{Pthread spawn-overhead.}{6}{section*.19}}
+\@writefile{toc}{\contentsline {paragraph}{The OMP-vs-pthreads surprise.}{6}{section*.21}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.2}Discussion of Iteration Number and Error}{6}{subsubsection.2.5.2}}
+\newlabel{sec:omega}{{2.5.2}{6}{Discussion of Iteration Number and Error}{subsubsection.2.5.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Temporal depth $T$ sweep at $N{=}2048$, $B{=}128$, 8 threads, iters=96. Left axis: CPE. Right axis: redundant halo work, $((B{+}2T)^2/B^2 - 1){\cdot }100$. Optimum at $T{=}8$, CPE 0.332.\relax }}{7}{figure.caption.15}}
+\newlabel{fig:t-sweep}{{6}{7}{Temporal depth $T$ sweep at $N{=}2048$, $B{=}128$, 8 threads, iters=96. Left axis: CPE. Right axis: redundant halo work, $((B{+}2T)^2/B^2 - 1){\cdot }100$. Optimum at $T{=}8$, CPE 0.332.\relax }{figure.caption.15}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Halo/$T$ sweep. Best at $T{=}8$ (25\% faster than baseline); $T{=}1$ pays scratch overhead with no DRAM-reuse benefit; $T{=}32$ is swallowed by halo overhead.\relax }}{7}{table.caption.16}}
+\newlabel{tab:t-sweep}{{1}{7}{Halo/$T$ sweep. Best at $T{=}8$ (25\% faster than baseline); $T{=}1$ pays scratch overhead with no DRAM-reuse benefit; $T{=}32$ is swallowed by halo overhead.\relax }{table.caption.16}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Left: strong scaling at $N{=}4098$, $B{=}128$, $T{=}8$. Right: 3 modes (strip / interleaved / 2D-block) $\times $ 2 schedules (persistent / spawn). Strip-persistent at 8 threads: CPE 0.255, 7.89$\times $ scaling. Interleaved bottoms out at 2.67$\times $ from false sharing on adjacent rows.\relax }}{7}{figure.caption.18}}
+\newlabel{fig:strong-scaling}{{7}{7}{Left: strong scaling at $N{=}4098$, $B{=}128$, $T{=}8$. Right: 3 modes (strip / interleaved / 2D-block) $\times $ 2 schedules (persistent / spawn). Strip-persistent at 8 threads: CPE 0.255, 7.89$\times $ scaling. Interleaved bottoms out at 2.67$\times $ from false sharing on adjacent rows.\relax }{figure.caption.18}{}}
+\newlabel{fig:decomp}{{7}{7}{Left: strong scaling at $N{=}4098$, $B{=}128$, $T{=}8$. Right: 3 modes (strip / interleaved / 2D-block) $\times $ 2 schedules (persistent / spawn). Strip-persistent at 8 threads: CPE 0.255, 7.89$\times $ scaling. Interleaved bottoms out at 2.67$\times $ from false sharing on adjacent rows.\relax }{figure.caption.18}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Wall-time vs iters at $N{=}512$, 4 threads, mode=strip. Persistent slope: 81\tmspace  +\thinmuskip {.1667em}$\mu $s/sweep (compute work). Spawn slope: 235\tmspace  +\thinmuskip {.1667em}$\mu $s/sweep. Slope difference 153\tmspace  +\thinmuskip {.1667em}$\mu $s is the per-sweep \texttt  {pthread\_create}+\texttt  {join} overhead, larger than the compute work itself.\relax }}{8}{figure.caption.20}}
+\newlabel{fig:spawn}{{8}{8}{Wall-time vs iters at $N{=}512$, 4 threads, mode=strip. Persistent slope: 81\,$\mu $s/sweep (compute work). Spawn slope: 235\,$\mu $s/sweep. Slope difference 153\,$\mu $s is the per-sweep \texttt {pthread\_create}+\texttt {join} overhead, larger than the compute work itself.\relax }{figure.caption.20}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Red-black GS-SOR omega U-curve at $N{=}128$, TOL=$10^{-5}$. Theory $\omega _{\text  {opt}} = 1.9517$ (red dashed) matches empirical minimum at $\omega = 1.95$ (green dotted) to 0.1\%. 254 iters at $\omega _{\text  {opt}}$ vs 3{,}434 at $\omega {=}1$ (Gauss-Seidel) is a 13.5$\times $ fewer-iteration win.\relax }}{8}{figure.caption.22}}
+\newlabel{fig:omega-ucurve}{{9}{8}{Red-black GS-SOR omega U-curve at $N{=}128$, TOL=$10^{-5}$. Theory $\omega _{\text {opt}} = 1.9517$ (red dashed) matches empirical minimum at $\omega = 1.95$ (green dotted) to 0.1\%. 254 iters at $\omega _{\text {opt}}$ vs 3{,}434 at $\omega {=}1$ (Gauss-Seidel) is a 13.5$\times $ fewer-iteration win.\relax }{figure.caption.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{FP32 round-off.}{8}{section*.23}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Overall comments}{8}{subsection.2.6}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}To the GPU!}{9}{section.3}}
+\newlabel{sec:gpu}{{3}{9}{To the GPU!}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Memory allocation and transfer}{9}{subsection.3.1}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces GPU memory layout at $N{=}2048$, FP32. The dominant transfer cost is the initial 16\tmspace  +\thinmuskip {.1667em}MB H$\to $D copy of \texttt  {d\_src} ($\sim $0.6\tmspace  +\thinmuskip {.1667em}ms at PCIe Gen4); after that, the iteration loop is fully on-device.\relax }}{9}{table.caption.24}}
+\newlabel{tab:gpu-mem}{{2}{9}{GPU memory layout at $N{=}2048$, FP32. The dominant transfer cost is the initial 16\,MB H$\to $D copy of \texttt {d\_src} ($\sim $0.6\,ms at PCIe Gen4); after that, the iteration loop is fully on-device.\relax }{table.caption.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}The parallelised hot loop on the GPU}{9}{subsection.3.2}}
+\@writefile{toc}{\contentsline {paragraph}{Vocabulary.}{9}{section*.25}}
+\@writefile{toc}{\contentsline {paragraph}{Tuning sweep.}{10}{section*.26}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces GPU 2D temporal sweep at $N{=}2048$, iters=96. Best at $(\textsc  {tile}{=}24,\tmspace  +\thinmuskip {.1667em} \textsc  {halo}{=}4)$ with CPE 0.0088, \textbf  {1.56$\times $} over the per-launch baseline (CPE 0.0137). Empirical rule: \textbf  {HALO $\leq $ INTER/4}.\relax }}{10}{figure.caption.27}}
+\newlabel{fig:gpu-tile-halo}{{10}{10}{GPU 2D temporal sweep at $N{=}2048$, iters=96. Best at $(\textsc {tile}{=}24,\, \textsc {halo}{=}4)$ with CPE 0.0088, \textbf {1.56$\times $} over the per-launch baseline (CPE 0.0137). Empirical rule: \textbf {HALO $\leq $ INTER/4}.\relax }{figure.caption.27}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Partitioning the rest of the algorithm}{10}{subsection.3.3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Running it end-to-end}{10}{subsection.3.4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Discussion of GPU results}{10}{subsection.3.5}}
+\@writefile{toc}{\contentsline {paragraph}{The temporal/baseline ratio is smaller on GPU.}{10}{section*.30}}
+\@writefile{toc}{\contentsline {paragraph}{Apples to apples.}{10}{section*.31}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces 2D GPU baseline vs temporal across $N$, iters=96, defaults TILE=32, HALO=4. At small $N$ the baseline is launch-overhead- dominated; at $N{\geq }1024$ the steady-state speedup is a more honest \textbf  {1.5--3$\times $}. At $N{=}4098$ both kernels degrade (working set $128$\tmspace  +\thinmuskip {.1667em}MB exceeds L40S's $\sim $96\tmspace  +\thinmuskip {.1667em}MB L2). Best 2D GPU CPE = \textbf  {0.0089} at $N{=}3074$.\relax }}{11}{figure.caption.28}}
+\newlabel{fig:gpu-n}{{11}{11}{2D GPU baseline vs temporal across $N$, iters=96, defaults TILE=32, HALO=4. At small $N$ the baseline is launch-overhead- dominated; at $N{\geq }1024$ the steady-state speedup is a more honest \textbf {1.5--3$\times $}. At $N{=}4098$ both kernels degrade (working set $128$\,MB exceeds L40S's $\sim $96\,MB L2). Best 2D GPU CPE = \textbf {0.0089} at $N{=}3074$.\relax }{figure.caption.28}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 2D GPU N-sweep, iters=96. CPE values reported at CPNS=2.0 (lab convention).\relax }}{11}{table.caption.29}}
+\newlabel{tab:gpu-n}{{3}{11}{2D GPU N-sweep, iters=96. CPE values reported at CPNS=2.0 (lab convention).\relax }{table.caption.29}{}}
+\@writefile{toc}{\contentsline {paragraph}{The 3D GPU honest negative.}{11}{section*.32}}
+\@writefile{toc}{\contentsline {paragraph}{Cross-tier headline (E11).}{11}{section*.34}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces 3D GPU baseline (grey) vs temporal (red) across $N$. At $N{\geq }194$ the 3D halo overhead ($7\times $ redundant work) eats the DRAM savings.\relax }}{12}{figure.caption.33}}
+\newlabel{fig:gpu-3d}{{12}{12}{3D GPU baseline (grey) vs temporal (red) across $N$. At $N{\geq }194$ the 3D halo overhead ($7\times $ redundant work) eats the DRAM savings.\relax }{figure.caption.33}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Cross-tier CPE summary (E11).\relax }}{12}{table.caption.35}}
+\newlabel{tab:headline}{{4}{12}{Cross-tier CPE summary (E11).\relax }{table.caption.35}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Closing Thoughts}{12}{section.4}}
+\newlabel{sec:closing}{{4}{12}{Closing Thoughts}{section.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{What worked.}{12}{section*.36}}
+\@writefile{toc}{\contentsline {paragraph}{What didn't.}{12}{section*.37}}
+\@writefile{toc}{\contentsline {paragraph}{Precision.}{12}{section*.38}}
+\@writefile{toc}{\contentsline {paragraph}{Future directions.}{13}{section*.39}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Compilation instructions}{13}{section.5}}
