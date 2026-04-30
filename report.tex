@@ -110,7 +110,7 @@ ch.~2) gives, for the Poisson problem on a uniform grid,
 and the spectral radius (a.k.a.\ asymptotic convergence factor) drops
 from $\rho_{\text{Jacobi}} = \cos(\pi/(N{-}1)) \approx 1 - \pi^2/(2N^2)$
 to $\rho_{\text{SOR}} = 1 - \frac{2\pi}{N}$.  In iteration-count terms,
-that's $O(N^2)$ iterations for Jacobi vs $O(N)$ for tuned SOR -- the
+that's $O(N^2)$ iterations for Jacobi vs $O(N)$ for tuned SOR. The
 single biggest algorithmic optimisation in this whole project, and we
 verify it experimentally in §\ref{sec:omega} (E08).  At $N{=}128$ the
 predicted ratio is $\sim 13\times$; we measured $13.5\times$.  Hopefully
@@ -131,7 +131,7 @@ for (i = 1; i < N-1; i++)
 \end{lstlisting}
 
 \noindent The trouble: when we write to \texttt{u[i][j]}, the next
-column update at \texttt{u[i][j+1]} reads \texttt{u[i][j]} -- the
+column update at \texttt{u[i][j+1]} reads \texttt{u[i][j]}. The
 just-overwritten value.  And the next row reads \texttt{u[i+1][j]},
 which was overwritten one row ago.  This is the classical
 \emph{loop-carried dependency} that makes the scan-order SOR sweep
@@ -164,7 +164,7 @@ study (§\ref{sec:omega}, E08).
 \paragraph{Jacobi ping-pong: the variant we actually parallelise.}
 Most of the project uses the still-simpler form: read from
 \texttt{src}, write to \texttt{dst}, swap.  No within-sweep dependency
-at all -- every cell is computed from the previous sweep's data:
+at all. Every cell is computed from the previous sweep's data:
 
 \begin{lstlisting}[language=C]
 /* Jacobi ping-pong: dst[i][j] = src[i][j] - OMEGA * (src[i][j] - avg) */
@@ -178,7 +178,7 @@ swap(&src, &dst);
 \end{lstlisting}
 
 \noindent We trade convergence rate (this form is unconditionally
-stable only for $\omega \in (0, 1]$ on large grids -- we use
+stable only for $\omega \in (0, 1]$ on large grids. We use
 $\omega{=}0.9$) for clean parallelism and the ability to do
 \emph{temporal blocking} cleanly.
 
@@ -224,18 +224,18 @@ cells are the correct $T$-advanced state.}
 
 Variable glossary used throughout:
 \begin{itemize}[leftmargin=1.4em,itemsep=1pt,topsep=1pt]
-  \item $N$ -- grid side (interior is $(N{-}2)^2$ cells; edges held at
+  \item $N$. Grid side (interior is $(N{-}2)^2$ cells; edges held at
         Dirichlet boundary).
-  \item $B$ -- spatial block (tile) size.  L1/L2 budget determines the
+  \item $B$. Spatial block (tile) size.  L1/L2 budget determines the
         upper bound; 64-cell minimum to amortise tile overheads.
-  \item $T$ -- temporal halo / super-step depth.  Number of sub-sweeps
+  \item $T$. Temporal halo / super-step depth.  Number of sub-sweeps
         fused per DRAM round-trip.
-  \item $\omega$ -- relaxation factor.  $0.9$ for Jacobi-ping-pong
+  \item $\omega$. Relaxation factor.  $0.9$ for Jacobi-ping-pong
         kernels, $\omega_{\text{opt}}{\approx}2{-}2\pi/N$ for the
         red-black SOR variant.
-  \item iters -- total sweep count.  Must satisfy
+  \item iters. Total sweep count.  Must satisfy
         \texttt{iters \% T == 0} for the temporal kernels.
-  \item TOL -- convergence tolerance ($10^{-5}$ in §\ref{sec:omega}).
+  \item TOL. Convergence tolerance ($10^{-5}$ in §\ref{sec:omega}).
 \end{itemize}
 
 \subsection{Implementation reality check}
@@ -264,7 +264,7 @@ u^{(1)} = \begin{bmatrix}
 \]
 
 \noindent (boundary in bold; interior in normal weight).  The (3,3)
-corner overshoots to $1.6525$ -- way past the true value of $1$ -- and
+corner overshoots to $1.6525$. Way past the true value of $1$. And
 that's exactly what over-relaxation looks like: we're betting that
 overshooting now will save us iterations later.  After sweep 2 the
 center cell is at $1.3005$, sweep 3 has it ringing back below 1, and
@@ -315,7 +315,7 @@ apples-to-apples comparison at the end is per-iter throughput
         modulo FMA contraction).  Every CPU smoke run prints
         \texttt{max|base-temp| = 0.0000e+00}.
   \item The GPU temporal kernel validates against the GPU baseline at
-        $\sim$1.4$\times 10^{-7}$ relative -- pure FP32 round-off
+        $\sim$1.4$\times 10^{-7}$ relative. Pure FP32 round-off
         accumulating over 96 sweeps; the bound is $\sqrt{N\cdot
         \text{iters}}\cdot\varepsilon_{\text{FP32}} \approx 10^{-5}$,
         comfortably under our TOL.  Both GPU kernels disagree with
@@ -334,8 +334,8 @@ apples-to-apples comparison at the end is per-iter throughput
 \subsection{The hot inner loop}
 
 The 5-point stencil is the only thing worth optimising.  It's
-executed $N^2 \cdot \text{iters}$ times -- for $N{=}2048$ and 64 iters
-that's a billion times -- and the rest of the program (boundary
+executed $N^2 \cdot \text{iters}$ times. For $N{=}2048$ and 64 iters
+that's a billion times. And the rest of the program (boundary
 copies, allocator calls, the main loop) is sublinear at $N^2$ or
 $O(\text{iters})$.
 
@@ -343,7 +343,7 @@ Per cell-update: we have 5--7 floating-point ops (4 adds for the
 neighbour sum, 1 multiply for $\tfrac{1}{4}$, plus the
 $\omega$-update which is either an FMA or a multiply-and-subtract
 depending on the form), against 1 read of \texttt{src[i][j]} and
-1 write to \texttt{dst[i][j]} \emph{at DRAM granularity} -- the four
+1 write to \texttt{dst[i][j]} \emph{at DRAM granularity}. The four
 neighbours stream through the same cache lines as we move along the
 row, so they don't cost any extra DRAM traffic in steady state.  At
 FP32, that's 8\,B/cell of DRAM traffic and roughly 6\,FLOPs/cell,
@@ -367,7 +367,7 @@ arithmetic itself is already free.
 \includegraphics[width=0.65\linewidth]{roofline2.png}
 \caption{Roofline-style throughput curve for our CPU configuration.
 The 5-point stencil's AI~$\approx$~0.5--0.75 puts us where the red
-arrow lands -- on the bandwidth-bound diagonal, well below the peak-
+arrow lands. On the bandwidth-bound diagonal, well below the peak-
 compute plateau.  This is real measured data, not the canonical
 double-roof cartoon: the curve is what we observe as we vary the
 working-set size and AI together.}
@@ -395,7 +395,7 @@ single-thread, 64 iters:
 \caption{Inner-loop micro-benchmarks at $N{=}512$, 1 thread, 64 iters.
 \texttt{ji}-order is a textbook \emph{wrong} answer: stride-$N$ along
 the inner loop blows the L1 cache on every column.  \texttt{restrict}
-is essentially free (gcc 11 already infers no-aliasing here -- I
+is essentially free (gcc 11 already infers no-aliasing here. I
 checked the assembly).}
 \label{tab:hot-loop}
 \end{table}
@@ -403,7 +403,7 @@ checked the assembly).}
 \noindent The \texttt{ji} regression is the canonical Bryant-Hallaron-
 style memory-pattern result: row-major stored data wants row-major
 access.  We'll keep \texttt{ij}-order forever.  And \texttt{restrict}
-buys us essentially nothing here -- the stencil writes to \texttt{dst}
+buys us essentially nothing here. The stencil writes to \texttt{dst}
 and reads from \texttt{src}, which are different allocations, so the
 compiler had no aliasing to worry about in the first place.  More on
 why this gets interesting once we add temporal-blocking scratch
@@ -418,19 +418,19 @@ complexity:
   \item \textbf{Plain double-loop} (the \texttt{baseline} in every
         binary).  Two nested loops, one big in-place pass, with the
         Jacobi ping-pong trick to make it parallelisable.
-  \item \textbf{Spatially blocked} -- tile the domain into $B{\times}B$
+  \item \textbf{Spatially blocked}. Tile the domain into $B{\times}B$
         chunks (Figure~\ref{fig:spatial-blocking}), each thread owns
         a tile, scratch is just the tile + 1 cell of halo.  Helps
         when the working set exceeds L2 (we'll see this in
         Figure~\ref{fig:size-sweep}).
-  \item \textbf{Temporally blocked} -- the shrinking trapezoid
+  \item \textbf{Temporally blocked}. The shrinking trapezoid
         (Figure~\ref{fig:halo-time}).  Per-thread scratch is
         $2(B{+}2T)^2$ floats (two ping-pong buffers).  We do $T$
         in-scratch sweeps before any DRAM round-trip.
 \end{enumerate}
 
 \noindent For (3), the work multiplier is $((B{+}2T)/B)^2$.  At
-$B{=}128$, $T{=}8$ that's $(144/128)^2 \approx 1.27\times$ -- 27\%
+$B{=}128$, $T{=}8$ that's $(144/128)^2 \approx 1.27\times$. 27\%
 extra cell-updates compared to baseline.  The bandwidth savings have
 to outpace this overhead for temporal blocking to win at all.
 
@@ -443,12 +443,13 @@ up in the timing:
   \item \textbf{$O(N)$ boundary copies.}  We pass the boundary rows
         and columns through unchanged from \texttt{src} to
         \texttt{dst} every sweep.  At $N{=}2048$ that's
-        $4N \cdot 4\,\text{B} = 32$\,KB of writes -- negligible vs.\
+        $4N \cdot 4\,\text{B} = 32$\,KB of writes. Negligible vs.\
         the $2N^2{\cdot}4\,\text{B} = 16$\,MB of interior data.
   \item \textbf{Per-tile scratch malloc inside the temporal kernel.}
-        The OpenMP version does \texttt{malloc(2(B+2T)\^{}2 \cdot
-        sizeof(float))} once per thread per super-step.  At
-        small $N$ this is real overhead -- it shows up directly in
+        The OpenMP version does
+        \texttt{malloc(2*(B+2T)*(B+2T)*sizeof(float))} once per thread
+        per super-step.  At
+        small $N$ this is real overhead. It shows up directly in
         the size-sweep result (Figure~\ref{fig:size-sweep}) where
         temporal \emph{loses} to baseline at $N{\leq}512$.
   \item \textbf{Convergence-norm reduction.}  In \texttt{sor2d\_rb.c}
@@ -516,7 +517,7 @@ The \texttt{collapse(2)} schedules tiles across threads as one
 flat $(\text{ntiles}_i \cdot \text{ntiles}_j)$ work-list, so OMP can
 load-balance even when one of the dimensions is small.  The
 \texttt{memcpy(Bp, A, ...)} in the inner $t$-loop is the
-``carry-the-frame-through'' trick -- it copies the previous
+``carry-the-frame-through'' trick. It copies the previous
 sub-step's whole scratch into the destination buffer so cells
 \emph{outside} the shrinking trapezoid (the perimeter of stale halo,
 plus any cells that map to a global-boundary coordinate) are
@@ -539,7 +540,7 @@ iters$=64$.  Median of 3 reps; shaded band is the min/max envelope.
 The L3$\to$DRAM crossover lands between $N{=}1024$ and $N{=}2048$:
 baseline CPE \emph{rises} from 0.464 to 0.667 as the working set
 exceeds 38\,MB (one socket's L3).  Temporal stays at $\sim$0.35 across
-$N{=}1024$\,--$\,4098$ -- it's L2-resident on its scratch -- and wins
+$N{=}1024$\,--$\,4098$. It's L2-resident on its scratch. And wins
 1.93$\times$ at $N{=}2048$.  Below L3 (the two leftmost points)
 temporal \emph{loses}: per-tile scratch malloc + redundant halo work
 cancel the savings on a working set the baseline already had in cache.}
@@ -548,11 +549,11 @@ cancel the savings on a working set the baseline already had in cache.}
 
 \noindent The L2 budget per Sapphire-Rapids core is roughly 2\,MB,
 and the per-thread $(B{+}2T)^2$ scratch at $B{=}128$, $T{=}8$ is
-$144^2{\cdot}4\,\text{B} = 81$\,KB -- comfortably L1, let alone L2.
+$144^2{\cdot}4\,\text{B} = 81$\,KB. Comfortably L1, let alone L2.
 So when we say ``temporal blocking earns its keep when the baseline
 goes off-chip'', we mean it literally: the temporal kernel's working
 set is hot in L1 even at $N{=}4098$.  The baseline's working set at
-$N{=}2048$ is $2{\cdot}2048^2{\cdot}4\,\text{B} = 16$\,MB -- fits L3
+$N{=}2048$ is $2{\cdot}2048^2{\cdot}4\,\text{B} = 16$\,MB. Fits L3
 of one socket (38.4\,MB), barely, but every sweep streams the whole
 thing through the cores.  At $N{=}4098$ that's 64\,MB, which spills
 L3 entirely; the baseline runs at DRAM bandwidth and the temporal
@@ -568,13 +569,13 @@ find the temporal kernel's spatial sweet spot
 \centering
 \includegraphics[width=0.62\linewidth]{e03_block_size.png}
 \caption{Spatial block-size sweep at $N{=}2048$, $T{=}4$, 8 threads.
-Baseline is flat (grey) -- $B$ has no effect on the baseline kernel,
+Baseline is flat (grey). $B$ has no effect on the baseline kernel,
 which never sees a tile.  Temporal has a wide plateau across $B{\in}
 [24, 256]$ at CPE $\sim$0.39, then \emph{falls off a cliff} at
 $B{\geq}384$.  Red dashed line is the L2-fit threshold:
 $2(B{+}8)^2{\cdot}4\,\text{B} \leq 1.5$\,MB $\Rightarrow B \leq 297$.
 Beyond that, the per-thread scratch doesn't fit L2 and we pay L3
-misses on our \emph{own} scratch -- defeating the entire purpose.}
+misses on our \emph{own} scratch. Defeating the entire purpose.}
 \label{fig:block-sweep}
 \end{figure}
 
@@ -596,7 +597,7 @@ threads, iters$=96$.  Left axis: CPE (lower = faster).  Right axis
 $((B{+}2T)^2/B^2 - 1){\cdot}100$.  The two axes encode the project's
 central tradeoff: DRAM savings grow linearly in $T$, redundant halo
 work grows quadratically, and the unimodal product peaks at $T{=}8$
-with CPE $0.332$ -- the best CPU CPE we measured anywhere.  $T{=}1$
+with CPE $0.332$. The best CPU CPE we measured anywhere.  $T{=}1$
 loses to per-tile-malloc + memcpy overhead with no DRAM reuse;
 $T{=}32$ has 125\% halo overhead and gives \emph{everything} back.}
 \label{fig:t-sweep}
@@ -623,9 +624,9 @@ $T$ & baseline CPE & temporal CPE & temp/base & halo overhead \\
 \bottomrule
 \end{tabular}
 \caption{Halo / $T$ sweep at $N{=}2048$, $B{=}128$, 8 threads,
-iters$=96$.  Best temp/base ratio at $T{=}8$ (0.75$\times$ -- temporal
+iters$=96$.  Best temp/base ratio at $T{=}8$ (0.75$\times$. Temporal
 is 25\% faster than baseline at the same iter count).  At $T{=}1$
-temporal is \emph{worse} -- it pays the per-tile-malloc + memcpy
+temporal is \emph{worse}. It pays the per-tile-malloc + memcpy
 overhead with no DRAM-reuse benefit.  At $T{=}32$ the halo overhead
 swallows the win.  This is the central plot for the talk.}
 \label{tab:t-sweep}
@@ -635,7 +636,7 @@ swallows the win.  This is the central plot for the talk.}
 worth quoting.  Figure~\ref{fig:strong-scaling} shows the strong-
 scaling curves: temporal hits 91\% of perfect scaling at 8 threads
 (7.31$\times$), baseline only 56\% (4.49$\times$).  At one thread
-temporal barely beats baseline (CPE 2.756 vs 2.792 -- 1.08$\times$),
+temporal barely beats baseline (CPE 2.756 vs 2.792. 1.08$\times$),
 because the Xeon's hardware prefetchers + 38\,MB L3 keep the
 single-thread baseline near streaming bandwidth and there's nothing
 for temporal blocking to recover.  This is the \emph{temporal
@@ -654,7 +655,7 @@ blocking earns its keep only once parallelism stresses DRAM} story.
 \caption{Left: strong scaling at $N{=}4098$, $B{=}128$, $T{=}8$.
 Right: 6 lines = 3 modes (strip / interleaved / 2D-block) $\times$
 2 schedules (persistent / spawn).  Strip-persistent at 8 threads:
-CPE 0.255, 7.89$\times$ scaling -- within 1.4\% of perfect 8$\times$.
+CPE 0.255, 7.89$\times$ scaling. Within 1.4\% of perfect 8$\times$.
 Interleaved bottoms out at 2.67$\times$; the cause is false sharing
 on adjacent rows, since two threads ping-pong cache lines they share.}
 \label{fig:strong-scaling}
@@ -668,7 +669,7 @@ strategies, all at $N{=}2048$.  Strip-persistent wins (CPE 0.255 at
 on adjacent rows); 2D-block sits in the middle (no false sharing,
 but 2$\times$ the halo of strip).  The \texttt{spawn}-vs-
 \texttt{persistent} gap is largest for strip because strip's
-per-sweep work is smallest -- 1.54$\times$ slowdown for strip,
+per-sweep work is smallest. 1.54$\times$ slowdown for strip,
 1.03$\times$ for interleaved.  Quantifying the per-sweep
 \texttt{pthread\_create} cost is the next experiment.
 
@@ -680,7 +681,7 @@ a direct Lab-6-Part-1b answer.
 \includegraphics[width=0.62\linewidth]{e07_spawn_overhead.png}
 \caption{Wall-time vs iters at $N{=}512$, 4 threads, mode=strip.
 Linear-fit \texttt{time = a + b$\cdot$iters} for both schedules.
-Persistent slope: 81\,$\mu$s/sweep -- the actual compute work.
+Persistent slope: 81\,$\mu$s/sweep. The actual compute work.
 Spawn slope: 235\,$\mu$s/sweep.  The slope difference of 153\,$\mu$s
 is the per-sweep \texttt{pthread\_create}$+$\texttt{join} overhead.
 \textbf{It's larger than the compute work itself.}  Spawning fresh
@@ -691,7 +692,7 @@ threads on every sweep is a 1.89$\times$ tax on the kernel.}
 \noindent The slope difference is the per-sweep \texttt{pthread\_create}
 cost: roughly 153\,$\mu$s at 4 threads, or about 38\,$\mu$s per
 \texttt{pthread\_create}+\texttt{join} pair.  This is why OpenMP
-under the hood uses a persistent thread pool -- it's not magic,
+under the hood uses a persistent thread pool. It's not magic,
 it's just spawning once per program rather than once per parallel
 region.
 
@@ -701,11 +702,11 @@ config).  Pthreads-strip-persistent at the same N measured CPE
 $\sim$0.4.  \emph{Pthreads is faster than OpenMP at the baseline
 sweep} on this machine.  The plausible suspect is OpenMP's default
 \texttt{schedule(static)} chunking interacting with first-touch NUMA
-allocation -- the buffers were allocated by thread 0, so on the second
+allocation. The buffers were allocated by thread 0, so on the second
 NUMA node every thread is reading remote-NUMA memory.  We didn't
 chase this further (would have needed \texttt{numactl} +
 \texttt{libnuma} surgery), but it's the candidate root cause.  An
-honest one to call out -- I'd expected OMP to dominate everywhere.
+honest one to call out. I'd expected OMP to dominate everywhere.
 
 \subsubsection{Discussion of Iteration Number and Error}
 \label{sec:omega}
@@ -723,7 +724,7 @@ plot iters-to-converge (Figure~\ref{fig:omega-ucurve}, E08).
 $\omega_{\text{opt}} = 2/(1+\sin(\pi/(N{-}1))) = \mathbf{1.9517}$
 (red dashed) matches empirical minimum at $\omega = \mathbf{1.95}$
 (green dotted) to \textbf{0.1\%}.  254 iters at $\omega_{\text{opt}}$
-vs 3,434 at $\omega{=}1$ (Gauss-Seidel) -- a \textbf{13.5$\times$
+vs 3,434 at $\omega{=}1$ (Gauss-Seidel). A \textbf{13.5$\times$
 fewer-iteration win} from algorithmic tuning alone.}
 \label{fig:omega-ucurve}
 \end{figure}
@@ -741,16 +742,16 @@ exploit it.  Damped Jacobi at $\omega = 0.9$ lives on the
 ping-pong form has spectral radius $>1$ on large grids and diverges
 unconditionally (we got bitten by this in the first session of the
 project, more on it in §\ref{sec:closing}).  The natural follow-up
-is a temporal-blocking variant of red-black GS-SOR -- the
+is a temporal-blocking variant of red-black GS-SOR. The
 shrinking trapezoid would have to be re-derived for paired
-half-sweeps -- and that's the most concrete future-work item below.
+half-sweeps. And that's the most concrete future-work item below.
 
 \paragraph{Convergence with the long-sweep FP32 question.}  At
 $N{=}128$, 254 iters at $\omega_{\text{opt}}$ and TOL$=10^{-5}$.
 The FP32 unit roundoff is $\sim 6\cdot 10^{-8}$, and a worst-case
 forward-error bound after $K$ stencil ops per cell is roughly
 $\sqrt{K}\cdot\varepsilon \sim 10^{-7}\cdot\sqrt{254\cdot 5} \approx
-10^{-6}$ -- comfortably below TOL.  At larger $N$ or tighter TOL
+10^{-6}$. Comfortably below TOL.  At larger $N$ or tighter TOL
 this bound starts to bite, and the responsible fix is either a
 Kahan-style compensated sum or moving to FP64.  We didn't need it.
 
@@ -760,7 +761,7 @@ Kahan-style compensated sum or moving to FP64.  We didn't need it.
   \item \textbf{Temporal blocking only earns its keep in the
         bandwidth-bound regime.}  Single-thread CPU was a wash
         (1.08$\times$); 8-thread + DRAM-spilling working set was
-        2$\times$.  This isn't a flaw -- it's the textbook
+        2$\times$.  This isn't a flaw. It's the textbook
         prediction.
   \item \textbf{The $T$-sweet-spot is sharp.}  At $T{=}8$ we get
         25\% faster than baseline; at $T{=}1$ we lose 47\% to
@@ -770,7 +771,7 @@ Kahan-style compensated sum or moving to FP64.  We didn't need it.
         we got 7.89$\times$ scaling at 8 threads.
   \item \textbf{OMP can be slower than pthreads at the baseline
         sweep on a NUMA box.}  Suspect: first-touch + cross-socket
-        threads.  Honest negative -- diagnose, don't paper over.
+        threads.  Honest negative. Diagnose, don't paper over.
   \item \textbf{$\omega_{\text{opt}}$ is real and matters more than
         any per-iter optimisation we tried on CPU.}  13.5$\times$
         fewer iters at $N{=}128$ from a single relaxation-parameter
@@ -785,7 +786,7 @@ Kahan-style compensated sum or moving to FP64.  We didn't need it.
 
 The CPU side is done; we have a baseline running near DRAM bandwidth
 and a temporal kernel running near L2 bandwidth.  The GPU has roughly
-$\bm{30\times}$ more memory bandwidth (864\,GB/s on the L40S vs
+$\mathbf{30\times}$ more memory bandwidth (864\,GB/s on the L40S vs
 $\sim$280\,GB/s per Xeon socket) and \emph{way} more parallelism.
 The interesting question is whether temporal blocking's relative
 advantage \emph{shrinks} on the GPU, because a kernel that's already
@@ -812,7 +813,7 @@ constants (\texttt{N, $\omega$, T}) & negligible    &        & yes (\texttt{cuda
 \caption{GPU memory layout at $N{=}2048$, FP32.  The dominant transfer
 cost is the initial 16\,MB host-to-device copy of \texttt{d\_src}.
 At PCIe Gen4's $\sim$25\,GB/s that's $\sim$0.6\,ms or $\sim$2$\times
-10^6$ cycles at 3.5\,GHz -- about the same wall time as a single
+10^6$ cycles at 3.5\,GHz. About the same wall time as a single
 GPU \emph{baseline} kernel launch over 2048$\times$2048
 ($\sim$2.7\,ms).  After that, the iteration loop is fully on-device.}
 \label{tab:gpu-mem}
@@ -820,12 +821,12 @@ GPU \emph{baseline} kernel launch over 2048$\times$2048
 
 \noindent The convergence-norm reduction we'd need for a TOL-based
 stop isn't in the temporal-blocking kernel because that kernel does
-$T$ sweeps in shared memory before any global write -- there's no
+$T$ sweeps in shared memory before any global write. There's no
 clean way to read out a partial residual mid-super-step.  We just
 run a fixed iters and trust the math.  This was a deliberate
 simplification; a real solver would need either a kernel-per-sweep
 form or a separate reduction-over-tiles kernel after each super-step.
-``It's not the most significant saving'' -- but it does mean we
+``It's not the most significant saving''. But it does mean we
 can't do adaptive convergence on the GPU in this implementation.
 
 \subsection{The parallelised hot loop on the GPU}
@@ -838,7 +839,7 @@ shared memory and a local thread-team that can synchronise via
 (the $B{\times}B$ tile) maps to CUDA \emph{tile} which we'll call
 \textsc{tile} throughout this section.  The within-block warps are
 the equivalent of SIMD lanes inside a CPU thread.  This vocabulary
-mismatch is worth telling the reader -- I've seen otherwise solid
+mismatch is worth telling the reader. I've seen otherwise solid
 people confused by it.
 
 The temporal kernel's structure is, in pseudocode:
@@ -885,7 +886,7 @@ The kernel uses dynamic shared memory ($2\textsc{tile}^2{\cdot}4$\,B
 at runtime without recompiling.  At sm\_89 the per-block shared-mem
 limit is 100\,KB; we're well under.  The ridge is occupancy: at
 \textsc{tile}$=32$ each block has 1024 threads (32$\times$32 the
-CUDA cap), which means only one block per SM -- the warp scheduler
+CUDA cap), which means only one block per SM. The warp scheduler
 has 32 warps to pick from, which is fine for hiding short-latency
 shared-mem dependencies but tight if the kernel ever stalls on a
 DRAM read.  At \textsc{tile}$=24$ we get 576 threads per block = 18
@@ -910,7 +911,7 @@ $\bigstar$ is the global minimum.}
 iters$=96$.  21 valid combos $\times$ 3 reps.  Best at
 $(\textsc{tile}{=}24,\, \textsc{halo}{=}4)$ with CPE 0.0088 --
 \textbf{1.56$\times$ over the per-launch baseline kernel}
-(CPE 0.0137).  TILE=8 is dead -- only 64 threads/block (2 warps)
+(CPE 0.0137).  TILE=8 is dead. Only 64 threads/block (2 warps)
 isn't enough to hide DRAM latency.  HALO too big collapses too:
 the empirical pattern is \textbf{HALO $\leq$ INTER/4}.}
 \label{fig:gpu-tile-halo}
@@ -927,7 +928,7 @@ Best is $(24, 4)$ with INTER$=16$, ratio $4{:}1$.
 We had a real design choice between two GPU kernel structures:
 
 \begin{enumerate}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]
-  \item \textbf{One kernel per stencil sub-step} -- a thin
+  \item \textbf{One kernel per stencil sub-step}. A thin
         \texttt{sor\_sweep} kernel that does exactly one Jacobi
         sweep, host loop relaunches it iters times.  Clean and easy
         to add a residual reduction between launches; matches the
@@ -944,7 +945,7 @@ We had a real design choice between two GPU kernel structures:
 \texttt{sor\_temporal} for the temporal kernel) and run them
 side-by-side in the same binary.  Letting the host swap pointers
 between launches is also \emph{ping-pong} (CUDA-side this time), so
-both kernels share the same overall structure -- the temporal kernel
+both kernels share the same overall structure. The temporal kernel
 just amortises 4 sweeps across one launch instead of one.  Shared-
 memory budgeting at TILE=24, HALO=4: $2{\cdot}24^2{\cdot}4$\,B
 $= 4.5$\,KB per block, well under the 100\,KB sm\_89 cap.
@@ -964,7 +965,7 @@ its wall time at $N{=}258$); the 17$\times$ ``speedup'' there is
 mostly launch-count reduction (96$\to$24), not bandwidth.  At
 $N{\geq}1024$ the steady-state speedup is a more honest
 \textbf{1.5--3$\times$}.  At $N{=}4098$ both kernels degrade because
-two FP32 buffers (128\,MB) exceed the L40S's $\sim$96\,MB L2 -- the
+two FP32 buffers (128\,MB) exceed the L40S's $\sim$96\,MB L2. The
 GPU equivalent of the CPU L3 cliff in Figure~\ref{fig:size-sweep},
 two orders of magnitude larger.  Best 2D GPU CPE = \textbf{0.0089}
 at $N{=}3074$.}
@@ -1033,7 +1034,7 @@ honest one.  Apples-to-apples comparisons:
 \end{itemize}
 
 \noindent The 310$\times$ is just $186 \cdot 1.56 \approx 290$
-(rounded) -- it's the product of two effects, presented on its own
+(rounded). It's the product of two effects, presented on its own
 it overstates the within-architecture optimization.  We'll quote it
 in the headline but be careful in the accompanying text.
 
@@ -1043,7 +1044,7 @@ it alongside the 3D baseline.  Result in Figure~\ref{fig:gpu-3d}: the
 3D temporal \emph{loses} to the 3D baseline at $N \geq 194$.  The
 arithmetic is unforgiving: with TILE=8, HALO=2, INTER=4, the halo-
 to-interior ratio in 3D is $(\textsc{tile}/\textsc{inter})^3 - 1 =
-(8/4)^3 - 1 = 7\times$ redundant work -- an order of magnitude worse
+(8/4)^3 - 1 = 7\times$ redundant work. An order of magnitude worse
 than the 0.78$\times$ overhead the 2D kernel pays at the same
 TILE/HALO ratio.  The 2.5D-streaming variant (Micikevicius 2009 --
 slide a 3-z-plane window through shared memory instead of loading a
@@ -1053,7 +1054,7 @@ cubic tile) is the canonical fix and is on the future-work list.
 \centering
 \includegraphics[width=0.55\linewidth]{e10_gpu_3d.png}
 \caption{3D GPU baseline (grey) vs temporal (red) across $N$.  At
-$N{\geq}194$ the temporal kernel loses -- the 3D halo overhead
+$N{\geq}194$ the temporal kernel loses. The 3D halo overhead
 ($7\times$ redundant work at TILE=8/HALO=2) eats the DRAM savings.
 This is the project's headline negative finding; the fix is well-
 known (2.5D streaming) but wasn't implemented.}
@@ -1087,11 +1088,11 @@ GPU temporal vs OMP temporal = 37$\times$) are the honest ones.}
 \end{table}
 
 \noindent At CPNS$=2.0$, GPU temporal's 0.009 CPE corresponds to
-${\sim}4.5\,\text{ps}$ per element on the L40S -- about one
+${\sim}4.5\,\text{ps}$ per element on the L40S. About one
 floating-point op per nanosecond per cell, which puts us near the
 machine-balance line for a memory-bound 5-point stencil at FP32.
 There's no easy 2$\times$ left at this point without changing the
-algorithm -- multigrid or 2.5D-streaming, both noted as future work.
+algorithm. Multigrid or 2.5D-streaming, both noted as future work.
 
 % =====================================================================
 \section{Closing Thoughts}
@@ -1115,7 +1116,7 @@ TFLOP/s on the L40S for a 0.75-AI stencil.
   \item \textbf{Single-thread CPU temporal was a wash} (1.08$\times$).
         The per-tile-malloc + redundant halo work cancelled the
         bandwidth savings on a single core where DRAM was already
-        lightly loaded.  Not a flaw -- temporal blocking earns its
+        lightly loaded.  Not a flaw. Temporal blocking earns its
         keep when the baseline is bandwidth-bound, and the
         single-thread baseline isn't.  But worth being upfront about.
   \item \textbf{OMP baseline (CPE 0.667) was worse than pthreads
@@ -1124,7 +1125,7 @@ TFLOP/s on the L40S for a 0.75-AI stencil.
         across both sockets; the pthreads version manually pinned
         threads with \texttt{OMP\_PROC\_BIND=close OMP\_PLACES=cores}
         and it shouldn't have mattered, but it apparently did.  I
-        didn't chase this with \texttt{numactl} -- if I could beg a
+        didn't chase this with \texttt{numactl}. If I could beg a
         guess, it could be that, or it could be the OMP scheduler
         introducing slight stagger between threads that the
         barrier-only pthreads loop doesn't.  Honest unanswered.
@@ -1139,7 +1140,7 @@ TFLOP/s on the L40S for a 0.75-AI stencil.
 \paragraph{Precision and numerical issues.}  The biggest ones we
 hit, in chronological order: (1) Lab-7's $\omega{=}1.85$ in damped-
 Jacobi-ping-pong form is unconditionally divergent on large grids
-(spectral radius $> 1$) -- early runs produced \texttt{inf}/\texttt{NaN}
+(spectral radius $> 1$). Early runs produced \texttt{inf}/\texttt{NaN}
 that the \texttt{max\_abs\_diff} validator silently masked because
 \texttt{NaN > 0} is false.  Fixed by switching to $\omega{=}0.9$ in
 the temporal kernels and reserving $\omega{>}1$ for the red-black
@@ -1176,7 +1177,7 @@ priority order:
         on top.  V-cycle restriction/prolongation is straightforward;
         each level's smoother is just our existing red-black SOR.
         This is also the right sanity check on ``iterations to
-        tolerance'' -- multigrid solvers converge in a small
+        tolerance''. Multigrid solvers converge in a small
         constant number of V-cycles regardless of $N$, so any
         residual-vs-iterations curve we plot for SOR can be
         compared against multigrid as the true asymptotic
@@ -1205,7 +1206,7 @@ module load cuda/12.8
 nvcc -O2 src/sor2d_gpu.cu -o build/sor2d_gpu
 nvcc -O2 src/sor3d_gpu.cu -o build/sor3d_gpu
 
-# Or just `make && make gpu` -- the project-root Makefile does the same.
+# Or just `make && make gpu`. The project-root Makefile does the same.
 \end{lstlisting}
 
 \noindent Why \texttt{-O1} and not \texttt{-O3}: matches the EC527
@@ -1213,22 +1214,22 @@ lab convention (verified by \texttt{grep -r "gcc -O" EC527/Lab*}).
 The lab CPE numbers in Bryant--O'Hallaron all assume \texttt{-O1}
 to keep the compiler from auto-vectorising and complicating the
 analysis.  We'd absolutely use \texttt{-O3 -march=native -ffast-math}
-in production -- a quick check showed gcc-11 auto-vectorises the
+in production. A quick check showed gcc-11 auto-vectorises the
 inner stencil into AVX-512 \texttt{vfmadd231ps} at \texttt{-O3} and
 roughly halves the CPU-baseline CPE.  That's a free 2$\times$ we
 chose not to take, for course-style consistency.
 
 Preprocessor knobs the reader can flip in the source:
 \begin{itemize}[leftmargin=1.4em,itemsep=1pt,topsep=1pt]
-  \item \texttt{N} -- grid side (set at runtime via \texttt{argv[1]}).
-  \item \texttt{B}, \texttt{T} -- spatial / temporal block sizes
+  \item \texttt{N}. Grid side (set at runtime via \texttt{argv[1]}).
+  \item \texttt{B}, \texttt{T}. Spatial / temporal block sizes
         (\texttt{argv[3]}, \texttt{argv[4]} for the OMP/CPU
         binaries).
-  \item \texttt{OMEGA} -- relaxation factor.  Default 0.9 (damped
+  \item \texttt{OMEGA}. Relaxation factor.  Default 0.9 (damped
         Jacobi); set to $\omega_{\text{opt}}(N)$ for
         \texttt{sor2d\_rb}.
-  \item \texttt{TOL} -- convergence tolerance.  $10^{-5}$ default.
-  \item \texttt{ITERS} -- fixed iter count for the temporal binaries
+  \item \texttt{TOL}. Convergence tolerance.  $10^{-5}$ default.
+  \item \texttt{ITERS}. Fixed iter count for the temporal binaries
         (must satisfy \texttt{ITERS \% T == 0}).
   \item GPU runtime: \texttt{--tile T} and \texttt{--halo H} on
         \texttt{sor2d\_gpu} and \texttt{sor3d\_gpu}.
@@ -1241,26 +1242,26 @@ Preprocessor knobs the reader can flip in the source:
 Source files in \texttt{src/}:
 
 \begin{itemize}[leftmargin=1.4em,itemsep=1pt,topsep=1pt]
-  \item \texttt{sor2d\_cpu.c} -- single-thread 2D baseline + temporal
+  \item \texttt{sor2d\_cpu.c}. Single-thread 2D baseline + temporal
         kernel.
-  \item \texttt{sor3d\_cpu.c} -- single-thread 3D, 7-point stencil.
-  \item \texttt{sor2d\_omp.c} -- OMP 2D baseline + temporal.
-  \item \texttt{sor3d\_omp.c} -- OMP 3D.
-  \item \texttt{sor2d\_pth.c} -- pthreads 2D, strip decomposition,
+  \item \texttt{sor3d\_cpu.c}. Single-thread 3D, 7-point stencil.
+  \item \texttt{sor2d\_omp.c}. OMP 2D baseline + temporal.
+  \item \texttt{sor3d\_omp.c}. OMP 3D.
+  \item \texttt{sor2d\_pth.c}. Pthreads 2D, strip decomposition,
         barrier-per-sweep.
-  \item \texttt{sor2d\_pth\_decomp.c} -- pthreads decomposition study
+  \item \texttt{sor2d\_pth\_decomp.c}. Pthreads decomposition study
         (3 modes $\times$ 2 schedules) used in
         Figure~\ref{fig:decomp}.
-  \item \texttt{sor2d\_pth\_temporal.c} -- pthreads 2D with temporal
+  \item \texttt{sor2d\_pth\_temporal.c}. Pthreads 2D with temporal
         blocking (mirror of the OMP version).
-  \item \texttt{sor3d\_pth\_temporal.c} -- pthreads 3D temporal.
-  \item \texttt{sor3d\_omp\_part.c} -- 3D OMP partitioning study
+  \item \texttt{sor3d\_pth\_temporal.c}. Pthreads 3D temporal.
+  \item \texttt{sor3d\_omp\_part.c}. 3D OMP partitioning study
         (slab/pencil/cube).
-  \item \texttt{sor2d\_rb.c} -- red-black GS-SOR with $\omega$ sweep
+  \item \texttt{sor2d\_rb.c}. Red-black GS-SOR with $\omega$ sweep
         used in §\ref{sec:omega}.
-  \item \texttt{sor2d\_gpu.cu} -- 2D GPU baseline + shared-memory
+  \item \texttt{sor2d\_gpu.cu}. 2D GPU baseline + shared-memory
         temporal kernel.
-  \item \texttt{sor3d\_gpu.cu} -- 3D GPU.
+  \item \texttt{sor3d\_gpu.cu}. 3D GPU.
 \end{itemize}
 
 \noindent Result data in \texttt{results/exp/E0\{0--11\}/}, one
