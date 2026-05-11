@@ -125,7 +125,7 @@ for (parity = 0; parity < 2; parity++) {
 \end{lstlisting}
 
 \noindent Used in \texttt{sor2d\_rb.c} for the omega-tuning study
-(§\ref{sec:omega}, E08).
+(§\ref{sec:omega}).
 
 \paragraph{Jacobi ping-pong.} Read from \texttt{src}, write to
 \texttt{dst}, swap. No within-sweep dependency:
@@ -157,7 +157,7 @@ super-step of $T$ Jacobi sweeps:
 \end{enumerate}
 DRAM traffic for the central cells drops by a factor of $T$. The cost
 is redundant halo work: the work multiplier is $((B{+}2T)/B)^2$. We
-measure its unimodal optimum in §\ref{sec:cpu-results} (E04).
+measure its unimodal optimum in §\ref{sec:cpu-results}.
 
 \begin{figure}[h!]
 \centering
@@ -329,7 +329,7 @@ compiler vectorises it cleanly.
 
 \subsubsection{Discussion of CPE}
 
-\paragraph{Size sweep.} Figure~\ref{fig:size-sweep} (E02) shows the
+\paragraph{Size sweep.} Figure~\ref{fig:size-sweep} shows the
 cache-hierarchy story.
 
 \begin{figure}[h!]
@@ -350,7 +350,7 @@ fits in L1 even at $N{=}4098$. The 2$\times$ ratio matches the
 bandwidth ratio between cache and DRAM, give or take halo overhead.
 
 \paragraph{Block size sweep.} At fixed $N{=}2048$ we sweep $B$
-(Figure~\ref{fig:block-sweep}, E03).
+(Figure~\ref{fig:block-sweep}).
 
 \begin{figure}[h!]
 \centering
@@ -367,7 +367,7 @@ L2.}
 and $2046/128 = 16$ tiles per axis aligns cleanly.
 
 \paragraph{Halo / T sweep.} At fixed $B{=}128$ we sweep $T$
-(Figure~\ref{fig:t-sweep}, E04).
+(Figure~\ref{fig:t-sweep}).
 
 \begin{figure}[h!]
 \centering
@@ -413,11 +413,11 @@ parallelism stresses DRAM.
 \centering
 \begin{subfigure}[b]{0.49\linewidth}
 \includegraphics[width=\linewidth]{e01_strong_scaling.png}
-\caption{Strong scaling (E01).}
+\caption{Strong scaling.}
 \end{subfigure}\hfill
 \begin{subfigure}[b]{0.49\linewidth}
 \includegraphics[width=\linewidth]{e05_decomposition.png}
-\caption{Pthreads decomposition $\times$ schedule (E05).}
+\caption{Pthreads decomposition $\times$ schedule.}
 \end{subfigure}
 \caption{Left: strong scaling at $N{=}4098$, $B{=}128$, $T{=}8$.
 Right: 3 modes (strip / interleaved / 2D-block) $\times$ 2 schedules
@@ -433,7 +433,7 @@ sits in the middle. The \texttt{spawn}-vs-\texttt{persistent} gap is
 largest for strip (1.54$\times$ slowdown) because strip's per-sweep
 work is smallest.
 
-\paragraph{Pthread spawn-overhead.} Figure~\ref{fig:spawn} (E07) is
+\paragraph{Pthread spawn-overhead.} Figure~\ref{fig:spawn} is
 the direct Lab-6-Part-1b answer.
 
 \begin{figure}[h!]
@@ -582,7 +582,7 @@ The kernel uses dynamic shared memory so we can vary
 block has 576 threads (18 warps), and the SM can fit two blocks at
 once. Good for occupancy.
 
-\paragraph{Tuning sweep.} Figure~\ref{fig:gpu-tile-halo} (E09) is the
+\paragraph{Tuning sweep.} Figure~\ref{fig:gpu-tile-halo} is the
 (\textsc{tile}, \textsc{halo}) heatmap.
 
 \begin{figure}[h!]
@@ -697,7 +697,7 @@ DRAM savings.}
 \label{fig:gpu-3d}
 \end{figure}
 
-\paragraph{Cross-tier headline (E11).} At $N{=}2050$, iters=96, 8
+\paragraph{Cross-tier headline.} At $N{=}2050$, iters=96, 8
 threads:
 
 \begin{table}[h!]
@@ -716,7 +716,7 @@ GPU baseline                  & 0.015    & 186$\times$ \\
 \textbf{GPU temporal}         & \textbf{0.009} & \textbf{310$\times$} \\
 \bottomrule
 \end{tabular}
-\caption{Cross-tier CPE summary (E11).}
+\caption{Cross-tier CPE summary.}
 \label{tab:headline}
 \end{table}
 
